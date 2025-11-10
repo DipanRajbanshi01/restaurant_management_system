@@ -1,0 +1,32 @@
+.orders-container {
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.orders-container h1 {
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.orders-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.order-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.order-card h3 {
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.order-card p {
+  color: #666;
+  margin: 0.5rem 0;
+}
+
