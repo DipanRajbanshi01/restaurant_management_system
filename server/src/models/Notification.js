@@ -10,9 +10,18 @@ const notificationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    enum: ['order', 'feedback', 'system'],
+    default: 'system',
+  },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order',
+  },
+  feedbackId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Feedback',
   },
   read: {
     type: Boolean,

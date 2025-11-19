@@ -1,27 +1,51 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { menuService } from '../../services/menuService';
 import { orderService } from '../../services/orderService';
 import { notificationService } from '../../services/notificationService';
+import { feedbackService } from '../../services/feedbackService';
 import { toast } from 'react-toastify';
+import UserNavbar from '../../components/navbars/UserNavbar';
 
 const UserDashboard = () => {
   const { user, logout } = useContext(AuthContext);
   const socket = useSocket();
+  const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => {
+    // Load cart from localStorage on initial render
+    const savedCart = localStorage.getItem('restaurantCart');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
   const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackItem, setFeedbackItem] = useState(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [hoveredFeedbackRating, setHoveredFeedbackRating] = useState(0);
+  const [ratingStats, setRatingStats] = useState([]);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('restaurantCart', JSON.stringify(cart));
+  }, [cart]);
 
   useEffect(() => {
     fetchMenuItems();
     fetchOrders();
     fetchNotifications();
+    fetchRatingStats();
   }, []);
 
   useEffect(() => {
@@ -63,40 +87,95 @@ const UserDashboard = () => {
     }
   };
 
-  const addToCart = (item) => {
-    const existingItem = cart.find((cartItem) => cartItem.item._id === item._id);
+  const fetchRatingStats = async () => {
+    try {
+      const response = await feedbackService.getRatingStats();
+      if (response.success) {
+        setRatingStats(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching rating stats:', error);
+    }
+  };
+
+  const openInstructionsModal = (item) => {
+    setSelectedItem(item);
+    setSpecialInstructions('');
+    setShowInstructionsModal(true);
+  };
+
+  const addToCart = (item, instructions = '') => {
+    const existingItem = cart.find((cartItem) => cartItem.item._id === item._id && cartItem.specialInstructions === instructions);
     if (existingItem) {
       setCart(
         cart.map((cartItem) =>
-          cartItem.item._id === item._id
+          cartItem.item._id === item._id && cartItem.specialInstructions === instructions
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         )
       );
     } else {
-      setCart([...cart, { item, quantity: 1, price: item.price }]);
+      setCart([...cart, { item, quantity: 1, price: item.price, specialInstructions: instructions }]);
     }
     toast.success('Item added to cart');
+    setShowInstructionsModal(false);
+    setSelectedItem(null);
+    setSpecialInstructions('');
   };
 
   const removeFromCart = (itemId) => {
     setCart(cart.filter((cartItem) => cartItem.item._id !== itemId));
   };
 
-  const updateQuantity = (itemId, quantity) => {
+  const updateQuantity = (idx, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(itemId);
+      const updatedCart = [...cart];
+      updatedCart.splice(idx, 1);
+      setCart(updatedCart);
       return;
     }
     setCart(
-      cart.map((cartItem) =>
-        cartItem.item._id === itemId ? { ...cartItem, quantity } : cartItem
+      cart.map((cartItem, index) =>
+        index === idx ? { ...cartItem, quantity } : cartItem
       )
     );
   };
 
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  };
+
+  const openFeedbackModal = (item) => {
+    setFeedbackItem(item);
+    setFeedbackRating(0);
+    setFeedbackComment('');
+    setShowFeedbackModal(true);
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (feedbackRating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+
+    try {
+      await feedbackService.createFeedback({
+        menuItem: feedbackItem._id,
+        rating: feedbackRating,
+        comment: feedbackComment,
+      });
+      toast.success('Thank you for your feedback!');
+      setShowFeedbackModal(false);
+      setFeedbackItem(null);
+      setFeedbackRating(0);
+      setFeedbackComment('');
+    } catch (error) {
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error('Failed to submit feedback');
+      }
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -111,6 +190,7 @@ const UserDashboard = () => {
           item: cartItem.item._id,
           quantity: cartItem.quantity,
           price: cartItem.price,
+          specialInstructions: cartItem.specialInstructions || '',
         })),
         totalPrice: getTotalPrice(),
         paymentMethod,
@@ -120,6 +200,7 @@ const UserDashboard = () => {
       if (response.success) {
         toast.success('Order placed successfully!');
         setCart([]);
+        localStorage.removeItem('restaurantCart'); // Clear cart from localStorage
         setShowCart(false);
         fetchOrders();
       }
@@ -140,81 +221,370 @@ const UserDashboard = () => {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const getItemRating = (itemId) => {
+    const stat = ratingStats.find(s => s.menuItemId === itemId);
+    return stat ? {
+      average: stat.averageRating,
+      count: stat.totalFeedbacks
+    } : null;
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-orange-600">User Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/user/orders"
-                className="relative px-4 py-2 text-gray-700 hover:text-orange-600"
-              >
-                Orders
-                {orders.filter((o) => o.status === 'ready').length > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {orders.filter((o) => o.status === 'ready').length}
-                  </span>
-                )}
-              </Link>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
+      {/* Special Instructions Modal */}
+      {showInstructionsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+            <h3 className="text-2xl font-bold mb-4 flex items-center">
+              <span className="text-3xl mr-3">🍽️</span>
+              <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                Special Instructions
+              </span>
+            </h3>
+            {selectedItem && (
+              <div className="mb-4">
+                <p className="text-lg font-semibold text-gray-800">{selectedItem.name}</p>
+                <p className="text-sm text-gray-600">Rs. {selectedItem.price}</p>
+              </div>
+            )}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                💬 Any special requests? (optional)
+              </label>
+              <textarea
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                placeholder="E.g., No onions, Extra spicy, Allergic to nuts, etc."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none resize-none"
+                rows="4"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                ⚠️ Chef will see these instructions
+              </p>
+            </div>
+            <div className="flex space-x-3">
               <button
-                onClick={() => setShowCart(!showCart)}
-                className="relative px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                onClick={() => {
+                  setShowInstructionsModal(false);
+                  setSelectedItem(null);
+                  setSpecialInstructions('');
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-300 transition-all duration-300"
               >
-                Cart ({cart.length})
+                Cancel
               </button>
-              <span className="text-gray-700">Welcome, {user?.name}</span>
               <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                onClick={() => addToCart(selectedItem, specialInstructions)}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300 shadow-lg"
               >
-                Logout
+                ✓ Add to Cart
               </button>
             </div>
           </div>
         </div>
-      </nav>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+            <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              ⭐ Rate This Item
+            </h3>
+            {feedbackItem && (
+              <div className="mb-4">
+                <p className="text-lg font-semibold text-gray-800">{feedbackItem.name}</p>
+                <p className="text-sm text-gray-600">Rs. {feedbackItem.price}</p>
+              </div>
+            )}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Rating <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center space-x-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setFeedbackRating(star)}
+                    onMouseEnter={() => setHoveredFeedbackRating(star)}
+                    onMouseLeave={() => setHoveredFeedbackRating(0)}
+                    className="text-5xl focus:outline-none transition-all duration-150 transform hover:scale-110"
+                  >
+                    {star <= (hoveredFeedbackRating || feedbackRating) ? (
+                      <span className="text-yellow-400">★</span>
+                    ) : (
+                      <span className="text-gray-300">☆</span>
+                    )}
+                  </button>
+                ))}
+                {feedbackRating > 0 && (
+                  <span className="ml-3 text-sm font-semibold text-gray-600">
+                    {feedbackRating} out of 5
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Comment (Optional)
+              </label>
+              <textarea
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                placeholder="Share your experience with this item..."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-400 transition-all duration-300 outline-none resize-none"
+                rows="4"
+                maxLength="500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {feedbackComment.length}/500 characters
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowFeedbackModal(false);
+                  setFeedbackItem(null);
+                  setFeedbackRating(0);
+                  setFeedbackComment('');
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-300 transition-all duration-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitFeedback}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-2xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all duration-300 shadow-lg"
+              >
+                ⭐ Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navbar */}
+      <UserNavbar orders={orders} cart={cart} showCart={showCart} setShowCart={setShowCart} />
 
       <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className={`grid gap-8 ${showCart ? 'md:grid-cols-3' : 'grid-cols-1'}`}>
           {/* Menu Items */}
-          <div className="md:col-span-2">
-            <h2 className="text-2xl font-bold mb-6">Menu Items</h2>
+          <div className={showCart ? 'md:col-span-2' : 'col-span-1'}>
+            <div className="flex justify-center items-center mb-6">
+              <h2 className="text-3xl text-center font-bold flex items-center gap-3">
+                <span className="text-gray-400">────୨ৎ────</span>
+                <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Our Menu</span>
+                <span className="text-gray-400">────୨ৎ────</span>
+              </h2>
+            </div>
+            
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="🔍 Search for delicious food..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-6 py-4 bg-white rounded-2xl shadow-lg border-2 border-transparent focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 text-lg"
+                />
+              </div>
+            </div>
+
+            {/* Category Filter Buttons */}
+            <div className="flex flex-wrap gap-3 mb-8">
+              {[
+                { name: 'All', icon: '🍽️' },
+                { name: 'Top Rated', icon: '⭐', special: true },
+                { name: 'Food', icon: '🍜' },
+                { name: 'Drinks', icon: '🥤' },
+                { name: 'Desserts', icon: '🍰' },
+                { name: 'Appetizers', icon: '🥟' },
+                { name: 'Others', icon: '🍴' }
+              ].map(({ name, icon, special }) => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedCategory(name)}
+                  className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 flex items-center space-x-2 shadow-md ${
+                    selectedCategory === name
+                      ? special 
+                        ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg scale-105'
+                        : 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
+                      : 'bg-white text-gray-700 hover:shadow-lg border border-gray-200'
+                  }`}
+                >
+                  <span>{icon}</span>
+                  <span>{name}</span>
+                </button>
+              ))}
+            </div>
+            
             {loading ? (
               <div className="text-center py-8">Loading menu...</div>
             ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {menuItems.map((item) => (
+              <div className={`grid gap-6 ${showCart ? 'md:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-4'}`}>
+                {menuItems
+                  .filter((item) => {
+                    // Filter by search query
+                    const query = searchQuery.toLowerCase();
+                    const matchesSearch = 
+                      item.name.toLowerCase().includes(query) ||
+                      item.description.toLowerCase().includes(query) ||
+                      (item.category && item.category.toLowerCase().includes(query));
+                    
+                    // Filter by category
+                    let matchesCategory;
+                    if (selectedCategory === 'Top Rated') {
+                      const rating = getItemRating(item._id);
+                      matchesCategory = rating && rating.average >= 4.0;
+                    } else {
+                      matchesCategory = 
+                        selectedCategory === 'All' || 
+                        (item.category || 'Others') === selectedCategory;
+                    }
+                    
+                    return matchesSearch && matchesCategory;
+                  })
+                  .map((item) => (
                   <div
                     key={item._id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
+                    className="group relative bg-gradient-to-br from-white to-gray-50 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100"
                   >
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-48 object-cover"
-                      />
-                    )}
-                    <div className="p-4">
-                      <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                      <p className="text-gray-600 mb-2">{item.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-2xl font-bold text-orange-600">
-                          Rs. {item.price}
+                    {/* Category Badge - Floating */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="inline-block px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm">
+                        {item.category || 'Others'}
+                      </span>
+                    </div>
+
+                    {/* Image Section with Overlay */}
+                    <div className="relative h-64 overflow-hidden">
+                      {item.image ? (
+                        <>
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-orange-100 to-red-100 flex items-center justify-center">
+                          <span className="text-6xl">🍽️</span>
+                        </div>
+                      )}
+                      
+                      {/* Chef's Special Badge */}
+                      {item.isChefSpecial && (
+                        <div className="absolute top-3 right-3 z-10">
+                          <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center space-x-1 animate-pulse">
+                            <span>⭐</span>
+                            <span>CHEF'S SPECIAL</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-6 relative">
+                      {/* Decorative Element */}
+                      <div className="absolute -top-8 left-6 w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500">
+                        <span className="text-2xl">
+                          {item.category === 'Drinks' ? '🥤' : 
+                           item.category === 'Food' ? '🍜' : 
+                           item.category === 'Desserts' ? '🍰' : 
+                           item.category === 'Appetizers' ? '🥟' : '🍴'}
                         </span>
+                      </div>
+
+                      <div className="mt-4">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors">
+                          {item.name}
+                        </h3>
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                          {item.description}
+                        </p>
+                        
+                        {/* Rating Display */}
+                        {(() => {
+                          const rating = getItemRating(item._id);
+                          return rating ? (
+                            <div className="flex items-center space-x-2 mb-3 pb-3 border-b border-gray-100">
+                              <div className="flex items-center">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <span
+                                    key={star}
+                                    className={`text-lg ${
+                                      star <= Math.round(rating.average)
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-300'
+                                    }`}
+                                  >
+                                    ★
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="text-sm font-semibold text-gray-700">
+                                {rating.average.toFixed(1)}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                ({rating.count} {rating.count === 1 ? 'review' : 'reviews'})
+                              </span>
+                            </div>
+                          ) : null;
+                        })()}
+                        
+                        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-500 font-medium">Price</span>
+                            <span className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                              Rs. {item.price}
+                            </span>
+                          </div>
                         <button
-                          onClick={() => addToCart(item)}
-                          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                          onClick={() => openInstructionsModal(item)}
+                          className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full font-semibold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2"
                         >
-                          Add to Cart
+                          <span>Add to Cart</span>
+                          <span>🛒</span>
+                        </button>
+                        </div>
+                        
+                        {/* Rate Item Button */}
+                        <button
+                          onClick={() => openFeedbackModal(item)}
+                          className="w-full mt-3 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-2xl font-semibold hover:bg-yellow-200 transition-all duration-300 flex items-center justify-center space-x-2 border-2 border-yellow-300"
+                        >
+                          <span>⭐</span>
+                          <span>Rate this item</span>
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
+                {menuItems.filter((item) => {
+                  const query = searchQuery.toLowerCase();
+                  const matchesSearch = 
+                    item.name.toLowerCase().includes(query) ||
+                    item.description.toLowerCase().includes(query) ||
+                    (item.category && item.category.toLowerCase().includes(query));
+                  let matchesCategory;
+                  if (selectedCategory === 'Top Rated') {
+                    const rating = getItemRating(item._id);
+                    matchesCategory = rating && rating.average >= 4.0;
+                  } else {
+                    matchesCategory = 
+                      selectedCategory === 'All' || 
+                      (item.category || 'Others') === selectedCategory;
+                  }
+                  return matchesSearch && matchesCategory;
+                }).length === 0 && (
+                  <div className="col-span-2 text-center py-8 text-gray-500">
+                    No menu items found {searchQuery && `matching "${searchQuery}"`} 
+                    {selectedCategory !== 'All' && ` in ${selectedCategory}`}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -222,48 +592,63 @@ const UserDashboard = () => {
           {/* Cart Sidebar */}
           <div className="md:col-span-1">
             {showCart && (
-              <div className="bg-white rounded-lg shadow-md p-6 sticky top-4">
-                <h2 className="text-2xl font-bold mb-4">Cart</h2>
+              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-6 sticky top-24 border border-gray-100">
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <span className="text-3xl mr-3">🛒</span>
+                  <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                    Your Cart
+                  </span>
+                </h2>
                 {cart.length === 0 ? (
                   <p className="text-gray-500">Cart is empty</p>
                 ) : (
                   <>
                     <div className="space-y-4 mb-4">
-                      {cart.map((cartItem) => (
+                      {cart.map((cartItem, idx) => (
                         <div
-                          key={cartItem.item._id}
-                          className="flex justify-between items-center border-b pb-2"
+                          key={`${cartItem.item._id}-${idx}`}
+                          className="border-b pb-3"
                         >
-                          <div>
-                            <p className="font-semibold">{cartItem.item.name}</p>
-                            <p className="text-sm text-gray-600">
-                              Rs. {cartItem.price} x {cartItem.quantity}
-                            </p>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <p className="font-semibold">{cartItem.item.name}</p>
+                              <p className="text-sm text-gray-600">
+                                Rs. {cartItem.price} x {cartItem.quantity}
+                              </p>
+                              {cartItem.specialInstructions && (
+                                <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  <p className="text-xs font-semibold text-yellow-800">📝 Special Instructions:</p>
+                                  <p className="text-xs text-yellow-700">{cartItem.specialInstructions}</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
                             <button
-                              onClick={() =>
-                                updateQuantity(cartItem.item._id, cartItem.quantity - 1)
-                              }
-                              className="px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => updateQuantity(idx, cartItem.quantity - 1)}
+                              className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                             >
                               -
                             </button>
-                            <span>{cartItem.quantity}</span>
+                            <span className="font-semibold">{cartItem.quantity}</span>
                             <button
-                              onClick={() =>
-                                updateQuantity(cartItem.item._id, cartItem.quantity + 1)
-                              }
-                              className="px-2 py-1 bg-gray-200 rounded"
+                              onClick={() => updateQuantity(idx, cartItem.quantity + 1)}
+                              className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                             >
                               +
                             </button>
                             <button
-                              onClick={() => removeFromCart(cartItem.item._id)}
-                              className="ml-2 text-red-500"
+                              onClick={() => {
+                                const updatedCart = [...cart];
+                                updatedCart.splice(idx, 1);
+                                setCart(updatedCart);
+                              }}
+                              className="text-red-500 hover:text-red-700 font-bold"
                             >
-                              ×
+                              🗑️
                             </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -289,9 +674,9 @@ const UserDashboard = () => {
                     </div>
                     <button
                       onClick={handlePlaceOrder}
-                      className="w-full bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600"
+                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
                     >
-                      Place Order
+                      🎉 Place Order
                     </button>
                   </>
                 )}
@@ -301,7 +686,7 @@ const UserDashboard = () => {
         </div>
 
         {/* Recent Orders */}
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Recent Orders</h2>
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <table className="w-full">
@@ -361,10 +746,10 @@ const UserDashboard = () => {
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
+          </div> 
+        </div> */}
       </div>
-    </div>
+    </div> 
   );
 };
 

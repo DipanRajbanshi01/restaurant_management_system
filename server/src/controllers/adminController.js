@@ -141,6 +141,76 @@ const getStats = async (req, res) => {
     const cookingOrders = await Order.countDocuments({ status: 'cooking' });
     const readyOrders = await Order.countDocuments({ status: 'ready' });
 
+    // Calculate total sales (all paid orders)
+    const totalSalesResult = await Order.aggregate([
+      { $match: { paymentStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+    const totalSales = totalSalesResult.length > 0 ? totalSalesResult[0].total : 0;
+
+    // Calculate today's sales
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySalesResult = await Order.aggregate([
+      { 
+        $match: { 
+          paymentStatus: 'paid',
+          createdAt: { $gte: today }
+        } 
+      },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+    const todaySales = todaySalesResult.length > 0 ? todaySalesResult[0].total : 0;
+
+    // Calculate this month's sales
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthSalesResult = await Order.aggregate([
+      { 
+        $match: { 
+          paymentStatus: 'paid',
+          createdAt: { $gte: startOfMonth }
+        } 
+      },
+      { $group: { _id: null, total: { $sum: '$totalPrice' } } }
+    ]);
+    const monthSales = monthSalesResult.length > 0 ? monthSalesResult[0].total : 0;
+
+    // Get most sold items
+    const mostSoldItems = await Order.aggregate([
+      { $match: { status: { $ne: 'cancelled' } } },
+      { $unwind: '$items' },
+      { 
+        $group: { 
+          _id: '$items.item',
+          totalQuantity: { $sum: '$items.quantity' },
+          totalRevenue: { $sum: { $multiply: ['$items.price', '$items.quantity'] } }
+        } 
+      },
+      { $sort: { totalQuantity: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'menuitems',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'itemDetails'
+        }
+      },
+      { $unwind: '$itemDetails' },
+      {
+        $project: {
+          name: '$itemDetails.name',
+          image: '$itemDetails.image',
+          category: '$itemDetails.category',
+          totalQuantity: 1,
+          totalRevenue: 1
+        }
+      }
+    ]);
+
+    // Get pending payment orders
+    const pendingPayments = await Order.countDocuments({ paymentStatus: 'pending' });
+
     res.json({
       success: true,
       data: {
@@ -150,6 +220,11 @@ const getStats = async (req, res) => {
         pendingOrders,
         cookingOrders,
         readyOrders,
+        totalSales,
+        todaySales,
+        monthSales,
+        mostSoldItems,
+        pendingPayments,
       },
     });
   } catch (error) {

@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-// const { getUsers, getUserById, updateUser, deleteUser } = require('../controllers/userController');
-// const { auth, authorize } = require('../middleware/auth');
+const { getProfile, updateProfile, updatePassword } = require('../controllers/userController');
+const { auth } = require('../middleware/auth');
 
-// TODO: Implement user routes
-// router.get('/', auth, authorize('admin'), getUsers);
-// router.get('/:id', auth, getUserById);
-// router.put('/:id', auth, updateUser);
-// router.delete('/:id', auth, authorize('admin'), deleteUser);
+// User profile routes
+router.get('/profile', auth, getProfile);
+router.put('/profile', auth, updateProfile);
+router.put('/password', auth, updatePassword);
 
 module.exports = router;
 

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { orderService } from '../../services/orderService';
 import { toast } from 'react-toastify';
+import AdminNavbar from '../../components/navbars/AdminNavbar';
 
 const AdminOrders = () => {
   const { logout } = useContext(AuthContext);
+  const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,28 +40,8 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-orange-600">All Orders</h1>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/admin/dashboard"
-                className="px-4 py-2 text-gray-700 hover:text-orange-600"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
+      <AdminNavbar />
 
       <div className="container mx-auto px-4 py-8">
         {loading ? (
@@ -71,6 +53,7 @@ const AdminOrders = () => {
                 <tr>
                   <th className="px-4 py-3 text-left">Order ID</th>
                   <th className="px-4 py-3 text-left">Customer</th>
+                  <th className="px-4 py-3 text-left">Chef</th>
                   <th className="px-4 py-3 text-left">Items</th>
                   <th className="px-4 py-3 text-left">Total</th>
                   <th className="px-4 py-3 text-left">Status</th>
@@ -88,6 +71,15 @@ const AdminOrders = () => {
                       <span className="text-sm text-gray-500">{order.user?.email}</span>
                     </td>
                     <td className="px-4 py-3">
+                      {order.chef ? (
+                        <div>
+                          <span className="text-sm font-semibold text-purple-600">👨‍🍳 {order.chef.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">Not assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       {order.items?.length || 0} item(s)
                     </td>
                     <td className="px-4 py-3 font-semibold">Rs. {order.totalPrice}</td>
@@ -100,6 +92,8 @@ const AdminOrders = () => {
                             ? 'bg-yellow-100 text-yellow-800'
                             : order.status === 'completed'
                             ? 'bg-blue-100 text-blue-800'
+                            : order.status === 'cancelled'
+                            ? 'bg-red-100 text-red-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
@@ -111,6 +105,8 @@ const AdminOrders = () => {
                         className={`px-2 py-1 rounded text-sm ${
                           order.paymentStatus === 'paid'
                             ? 'bg-green-100 text-green-800'
+                            : order.paymentStatus === 'cancelled'
+                            ? 'bg-gray-100 text-gray-800'
                             : 'bg-red-100 text-red-800'
                         }`}
                       >
@@ -134,7 +130,7 @@ const AdminOrders = () => {
                 ))}
                 {orders.length === 0 && (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
                       No orders found
                     </td>
                   </tr>

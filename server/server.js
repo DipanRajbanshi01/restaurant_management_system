@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 const http = require('http');
 const { Server } = require('socket.io');
 const initAdmin = require('./src/utils/initAdmin');
+const migrateFeedbackIndexes = require('./src/utils/migrateFeedbackIndexes');
+const migrateMenuTags = require('./src/utils/migrateMenuTags');
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +44,8 @@ app.use('/api/menu', require('./src/routes/menu'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/notifications', require('./src/routes/notifications'));
 app.use('/api/upload', require('./src/routes/upload'));
+app.use('/api/feedback', require('./src/routes/feedback'));
+app.use('/api/chatbot', require('./src/routes/chatbot'));
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
@@ -76,6 +80,12 @@ const connectDB = async () => {
     
     // Initialize admin user
     await initAdmin();
+    
+    // Migrate feedback indexes
+    await migrateFeedbackIndexes();
+    
+    // Migrate menu tags
+    await migrateMenuTags();
   } catch (error) {
     console.error('Error connecting to MongoDB:', error.message);
     process.exit(1);

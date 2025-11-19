@@ -15,6 +15,16 @@ const menuItemSchema = new mongoose.Schema({
     required: [true, 'Please provide item price'],
     min: 0,
   },
+  category: {
+    type: String,
+    enum: ['Food', 'Drinks', 'Desserts', 'Appetizers', 'Others'],
+    default: 'Others',
+  },
+  tags: {
+    type: [String],
+    enum: ['Spicy', 'Sweet', 'Healthy', 'Veg', 'Non-Veg', 'Beverages', 'Light', 'Heavy', 'Starter', 'Main Course'],
+    default: [],
+  },
   image: {
     type: String,
     default: '',
@@ -22,6 +32,13 @@ const menuItemSchema = new mongoose.Schema({
   available: {
     type: Boolean,
     default: true,
+  },
+  isChefSpecial: {
+    type: Boolean,
+    default: false,
+  },
+  specialDate: {
+    type: Date,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

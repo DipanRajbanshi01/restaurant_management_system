@@ -54,9 +54,9 @@ const getOrders = async (req, res) => {
     if (req.user.role === 'user') {
       query.user = req.user.id;
     }
-    // Chefs can see pending and cooking orders
+    // Chefs can see pending, cooking, and ready orders
     else if (req.user.role === 'chef') {
-      query.status = { $in: ['pending', 'cooking'] };
+      query.status = { $in: ['pending', 'cooking', 'ready'] };
     }
     // Admin can see all orders
 
@@ -120,7 +120,7 @@ const getOrder = async (req, res) => {
 
 // @desc    Update order status
 // @route   PUT /api/orders/:id/status
-// @access  Chef/Admin
+// @access  Chef/Admin/User (User can only mark as completed)
 const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -135,10 +135,38 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // If user is trying to update, verify they own the order
+    if (req.user.role === 'user') {
+      if (order.user._id.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to update this order',
+        });
+      }
+      // Users can only mark orders as 'completed' or cancel 'pending' orders
+      if (status === 'cancelled') {
+        if (order.status !== 'pending') {
+          return res.status(403).json({
+            success: false,
+            message: 'You can only cancel orders that are pending (not yet being cooked)',
+          });
+        }
+      } else if (status !== 'completed') {
+        return res.status(403).json({
+          success: false,
+          message: 'Users can only mark orders as completed or cancel pending orders',
+        });
+      }
+    }
+
     // Update order
     order.status = status;
     if (req.user.role === 'chef' && status === 'cooking') {
       order.chef = req.user.id;
+    }
+    // Auto-cancel payment if order is cancelled
+    if (status === 'cancelled') {
+      order.paymentStatus = 'cancelled';
     }
     await order.save();
 
@@ -147,6 +175,7 @@ const updateOrderStatus = async (req, res) => {
       const notification = await Notification.create({
         userId: order.user._id,
         message: `Your order #${order._id} is ready!`,
+        type: 'order',
         orderId: order._id,
       });
 
@@ -193,6 +222,14 @@ const updatePaymentStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Order not found',
+      });
+    }
+
+    // Prevent payment for cancelled orders
+    if (order.status === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot process payment for cancelled orders',
       });
     }
 

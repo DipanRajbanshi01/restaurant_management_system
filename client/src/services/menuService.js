@@ -25,5 +25,16 @@ export const menuService = {
     const response = await api.delete(`/menu/${id}`);
     return response.data;
   },
+
+  // Chef's Special methods
+  createChefSpecial: async (itemData) => {
+    const response = await api.post('/menu/chef-special', itemData);
+    return response.data;
+  },
+
+  removeChefSpecial: async (id) => {
+    const response = await api.delete(`/menu/chef-special/${id}`);
+    return response.data;
+  },
 };
 

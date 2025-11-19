@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { adminService } from '../../services/adminService';
 import { toast } from 'react-toastify';
+import AdminNavbar from '../../components/navbars/AdminNavbar';
 
 const AdminUsers = () => {
   const { logout } = useContext(AuthContext);
+  const location = useLocation();
   const [users, setUsers] = useState([]);
   const [chefs, setChefs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,28 +46,8 @@ const AdminUsers = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold text-orange-600">Manage Users & Chefs</h1>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/admin/dashboard"
-                className="px-4 py-2 text-gray-700 hover:text-orange-600"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
+      <AdminNavbar />
 
       <div className="container mx-auto px-4 py-8">
         {/* Tabs */}

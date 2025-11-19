@@ -19,8 +19,8 @@ router.post('/', authorize('user'), createOrder);
 router.get('/', getOrders);
 router.get('/:id', getOrder);
 
-// Chef and Admin can update order status
-router.put('/:id/status', authorize('chef', 'admin'), updateOrderStatus);
+// Chef and Admin can update order status, Users can mark as completed
+router.put('/:id/status', authorize('chef', 'admin', 'user'), updateOrderStatus);
 
 // User can update payment status
 router.put('/:id/payment', authorize('user'), updatePaymentStatus);

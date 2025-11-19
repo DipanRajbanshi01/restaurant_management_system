@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { authService } from '../services/authService';
 
 export const AuthContext = createContext();
@@ -69,6 +69,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
   };
 
+  const updateUserContext = (userData) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      ...userData,
+    }));
+  };
+
   const value = {
     user,
     loading,
@@ -76,8 +83,18 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    updateUserContext,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Custom hook to use the AuthContext
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
