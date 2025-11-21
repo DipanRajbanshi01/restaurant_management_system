@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import { adminService } from '../../services/adminService';
 import { menuService } from '../../services/menuService';
 import { orderService } from '../../services/orderService';
@@ -9,6 +10,7 @@ import AdminNavbar from '../../components/navbars/AdminNavbar';
 
 const AdminDashboard = () => {
   const { user, logout } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
   const location = useLocation();
   const [stats, setStats] = useState(null);
   const [showChefForm, setShowChefForm] = useState(false);
@@ -46,26 +48,44 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-red-50">
+    <div className={`min-h-screen ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-purple-50 via-pink-50 to-red-50'
+    }`}>
       {/* Navbar */}
       <AdminNavbar />
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats */}
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className={`text-center py-8 ${
+            theme === 'dark' ? 'text-gray-300' : ''
+          }`}>Loading...</div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold text-gray-600">Total Users</h3>
+            <div className={`p-6 rounded-lg shadow-md ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}>
+              <h3 className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>Total Users</h3>
               <p className="text-3xl font-bold text-blue-600">{stats?.totalUsers || 0}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold text-gray-600">Total Chefs</h3>
+            <div className={`p-6 rounded-lg shadow-md ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}>
+              <h3 className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>Total Chefs</h3>
               <p className="text-3xl font-bold text-green-600">{stats?.totalChefs || 0}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold text-gray-600">Total Orders</h3>
+            <div className={`p-6 rounded-lg shadow-md ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}>
+              <h3 className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>Total Orders</h3>
               <p className="text-3xl font-bold text-orange-600">{stats?.totalOrders || 0}</p>
             </div>
           </div>
@@ -75,11 +95,13 @@ const AdminDashboard = () => {
         {stats && (
           <>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <h2 className={`text-2xl font-bold flex items-center ${
+                theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+              }`}>
                 <span className="text-3xl mr-2">💰</span>
                 Sales Analytics
               </h2>
-              <p className="text-gray-600">COL Sales Analytics</p>
+              <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>COL Sales Analytics</p>
             </div>
             
             <div className="grid md:grid-cols-4 gap-6 mb-8">
@@ -122,20 +144,28 @@ const AdminDashboard = () => {
 
             {/* Most Sold Items */}
             {stats.mostSoldItems && stats.mostSoldItems.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
+              <div className={`rounded-2xl shadow-xl p-8 mb-8 ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+              }`}>
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                  <h2 className={`text-2xl font-bold flex items-center ${
+                    theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                  }`}>
                     <span className="text-3xl mr-2">🏆</span>
                     Top 5 Most Sold Items
                   </h2>
-                  <p className="text-gray-600">Your best performing menu items</p>
+                  <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Your best performing menu items</p>
                 </div>
                 
                 <div className="grid md:grid-cols-5 gap-4">
                   {stats.mostSoldItems.map((item, index) => (
                     <div
                       key={item._id}
-                      className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-4 border-2 border-orange-200 hover:border-orange-400 transition-all duration-300 hover:shadow-lg"
+                      className={`rounded-2xl p-4 border-2 hover:border-orange-400 transition-all duration-300 hover:shadow-lg ${
+                        theme === 'dark'
+                          ? 'bg-gray-700 border-gray-600'
+                          : 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200'
+                      }`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-2xl font-bold text-orange-600">#{index + 1}</span>
@@ -152,17 +182,19 @@ const AdminDashboard = () => {
                         />
                       )}
                       
-                      <h3 className="font-bold text-gray-800 mb-2 truncate" title={item.name}>
+                      <h3 className={`font-bold mb-2 truncate ${
+                        theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                      }`} title={item.name}>
                         {item.name}
                       </h3>
                       
                       <div className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Sold:</span>
+                          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Sold:</span>
                           <span className="font-bold text-orange-600">{item.totalQuantity} units</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Revenue:</span>
+                          <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Revenue:</span>
                           <span className="font-bold text-green-600">Rs. {item.totalRevenue?.toLocaleString()}</span>
                         </div>
                       </div>
@@ -174,28 +206,40 @@ const AdminDashboard = () => {
 
             {/* Order Status Stats */}
             <div className="grid md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-yellow-500">
+              <div className={`p-6 rounded-xl shadow-lg border-l-4 border-yellow-500 ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+              }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-600">Pending Orders</h3>
+                    <h3 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Pending Orders</h3>
                     <p className="text-3xl font-bold text-yellow-600">{stats.pendingOrders || 0}</p>
                   </div>
                   <span className="text-5xl">⏰</span>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-orange-500">
+              <div className={`p-6 rounded-xl shadow-lg border-l-4 border-orange-500 ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+              }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-600">Cooking</h3>
+                    <h3 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Cooking</h3>
                     <p className="text-3xl font-bold text-orange-600">{stats.cookingOrders || 0}</p>
                   </div>
                   <span className="text-5xl">👨‍🍳</span>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-lg border-l-4 border-green-500">
+              <div className={`p-6 rounded-xl shadow-lg border-l-4 border-green-500 ${
+                theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+              }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-600">Ready</h3>
+                    <h3 className={`text-lg font-semibold ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    }`}>Ready</h3>
                     <p className="text-3xl font-bold text-green-600">{stats.readyOrders || 0}</p>
                   </div>
                   <span className="text-5xl">✅</span>
@@ -206,9 +250,13 @@ const AdminDashboard = () => {
         )}
 
         {/* Create Chef Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className={`rounded-lg shadow-md p-6 mb-8 ${
+          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+        }`}>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">Create Chef Account</h2>
+            <h2 className={`text-2xl font-bold ${
+              theme === 'dark' ? 'text-gray-100' : ''
+            }`}>Create Chef Account</h2>
             <button
               onClick={() => setShowChefForm(!showChefForm)}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
@@ -220,34 +268,52 @@ const AdminDashboard = () => {
           {showChefForm && (
             <form onSubmit={handleCreateChef} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
+                <label className={`block text-sm font-medium mb-1 ${
+                  theme === 'dark' ? 'text-gray-200' : ''
+                }`}>Name</label>
                 <input
                   type="text"
                   value={chefData.name}
                   onChange={(e) => setChefData({ ...chefData, name: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className={`w-full px-4 py-2 border rounded-lg ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                      : ''
+                  }`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Email</label>
+                <label className={`block text-sm font-medium mb-1 ${
+                  theme === 'dark' ? 'text-gray-200' : ''
+                }`}>Email</label>
                 <input
                   type="email"
                   value={chefData.email}
                   onChange={(e) => setChefData({ ...chefData, email: e.target.value })}
                   required
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className={`w-full px-4 py-2 border rounded-lg ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                      : ''
+                  }`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Password</label>
+                <label className={`block text-sm font-medium mb-1 ${
+                  theme === 'dark' ? 'text-gray-200' : ''
+                }`}>Password</label>
                 <input
                   type="password"
                   value={chefData.password}
                   onChange={(e) => setChefData({ ...chefData, password: e.target.value })}
                   required
                   minLength={6}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className={`w-full px-4 py-2 border rounded-lg ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                      : ''
+                  }`}
                 />
               </div>
               <button
@@ -264,27 +330,39 @@ const AdminDashboard = () => {
         <div className="grid md:grid-cols-3 gap-6">
           <Link
             to="/admin/menu"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition text-center"
+            className={`p-6 rounded-lg shadow-md hover:shadow-lg transition text-center ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}
           >
             <div className="text-4xl mb-2">🍽️</div>
-            <h3 className="text-xl font-semibold">Manage Menu</h3>
-            <p className="text-gray-600">Add, edit, or delete menu items</p>
+            <h3 className={`text-xl font-semibold ${
+              theme === 'dark' ? 'text-gray-100' : ''
+            }`}>Manage Menu</h3>
+            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Add, edit, or delete menu items</p>
           </Link>
           <Link
             to="/admin/orders"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition text-center"
+            className={`p-6 rounded-lg shadow-md hover:shadow-lg transition text-center ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}
           >
             <div className="text-4xl mb-2">📋</div>
-            <h3 className="text-xl font-semibold">View Orders</h3>
-            <p className="text-gray-600">View and manage all orders</p>
+            <h3 className={`text-xl font-semibold ${
+              theme === 'dark' ? 'text-gray-100' : ''
+            }`}>View Orders</h3>
+            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>View and manage all orders</p>
           </Link>
           <Link
             to="/admin/users"
-            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition text-center"
+            className={`p-6 rounded-lg shadow-md hover:shadow-lg transition text-center ${
+              theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+            }`}
           >
             <div className="text-4xl mb-2">👥</div>
-            <h3 className="text-xl font-semibold">Manage Users</h3>
-            <p className="text-gray-600">View users and chefs</p>
+            <h3 className={`text-xl font-semibold ${
+              theme === 'dark' ? 'text-gray-100' : ''
+            }`}>Manage Users</h3>
+            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>View users and chefs</p>
           </Link>
         </div>
       </div>

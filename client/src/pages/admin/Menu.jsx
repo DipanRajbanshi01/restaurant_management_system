@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import { menuService } from '../../services/menuService';
 import { uploadService } from '../../services/uploadService';
 import { toast } from 'react-toastify';
@@ -8,6 +9,7 @@ import AdminNavbar from '../../components/navbars/AdminNavbar';
 
 const AdminMenu = () => {
   const { logout } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
   const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -169,7 +171,11 @@ const AdminMenu = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-red-50">
+    <div className={`min-h-screen ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-gray-50 via-orange-50 to-red-50'
+    }`}>
       <AdminNavbar />
 
       <div className="container mx-auto px-4 py-8">
@@ -315,9 +321,11 @@ const AdminMenu = () => {
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
                     dragActive
-                      ? 'border-orange-500 bg-orange-50 scale-105'
-                      : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
-                  } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      ? 'border-orange-500 scale-105'
+                      : theme === 'dark'
+                        ? 'border-gray-600 hover:border-orange-500 hover:bg-gray-700'
+                        : 'border-gray-300 hover:border-orange-400 hover:bg-gray-50'
+                  } ${dragActive && theme === 'dark' ? 'bg-orange-900/30' : dragActive ? 'bg-orange-50' : ''} ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   {imagePreview ? (
                     <div className="relative">
@@ -337,10 +345,14 @@ const AdminMenu = () => {
                   ) : (
                     <>
                       <div className="text-4xl mb-4">📷</div>
-                      <p className="text-gray-600 mb-2">
+                      <p className={`mb-2 ${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
                         Drag and drop an image here, or click to select
                       </p>
-                      <p className="text-sm text-gray-500 mb-4">
+                      <p className={`text-sm mb-4 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
                         Supports: JPEG, PNG, GIF, WebP (Max 5MB)
                       </p>
                       <input
@@ -363,7 +375,9 @@ const AdminMenu = () => {
 
                 {/* Or enter URL manually */}
                 <div className="mt-4">
-                  <p className="text-sm text-gray-600 font-medium mb-2">Or enter image URL:</p>
+                  <p className={`text-sm font-medium mb-2 ${
+                    theme === 'dark' ? 'text-gray-200' : 'text-gray-600'
+                  }`}>Or enter image URL:</p>
                   <input
                     type="url"
                     value={formData.image}
@@ -372,14 +386,20 @@ const AdminMenu = () => {
                       setImagePreview(e.target.value || null);
                     }}
                     placeholder="https://example.com/image.jpg"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:border-orange-500 focus:outline-none transition-colors ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                        : 'border-gray-200'
+                    }`}
                   />
                 </div>
 
                 {/* Current image preview if URL is set */}
                 {formData.image && !imagePreview && formData.image.startsWith('http') && (
                   <div className="mt-4">
-                    <p className="text-sm text-gray-600 mb-2">Current image:</p>
+                    <p className={`text-sm mb-2 ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-600'
+                    }`}>Current image:</p>
                     <img
                       src={formData.image}
                       alt="Current"
@@ -392,7 +412,11 @@ const AdminMenu = () => {
                   </div>
                 )}
               </div>
-              <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+              <div className={`p-4 rounded-xl border-2 ${
+                theme === 'dark' 
+                  ? 'bg-gray-700 border-gray-600' 
+                  : 'bg-gray-50 border-gray-200'
+              }`}>
                 <label className="flex items-center cursor-pointer group">
                   <input
                     type="checkbox"
@@ -400,15 +424,23 @@ const AdminMenu = () => {
                     onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
                     className="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500 mr-3"
                   />
-                  <span className="font-semibold text-gray-700 group-hover:text-orange-600 transition-colors">
+                  <span className={`font-semibold transition-colors ${
+                    theme === 'dark' 
+                      ? 'text-gray-200 group-hover:text-orange-400' 
+                      : 'text-gray-700 group-hover:text-orange-600'
+                  }`}>
                     ✓ Mark as Available
                   </span>
                 </label>
-                <p className="text-xs text-gray-500 mt-2 ml-8">
+                <p className={`text-xs mt-2 ml-8 ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}>
                   Unchecked items won't appear in the menu
                 </p>
               </div>
-              <div className="flex space-x-3 pt-4 border-t">
+              <div className={`flex space-x-3 pt-4 border-t ${
+                theme === 'dark' ? 'border-gray-700' : ''
+              }`}>
                 <button
                   type="submit"
                   disabled={uploading}
@@ -422,7 +454,11 @@ const AdminMenu = () => {
                     setShowForm(false);
                     setEditingItem(null);
                   }}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 transition-colors"
+                  className={`px-6 py-3 rounded-xl font-semibold transition-colors ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                      : 'bg-gray-500 text-white hover:bg-gray-600'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -441,14 +477,20 @@ const AdminMenu = () => {
                 placeholder="🔍 Search menu items..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 bg-white rounded-2xl shadow-lg border-2 border-transparent focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 text-lg"
+                className={`w-full px-6 py-4 rounded-2xl shadow-lg border-2 border-transparent focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 text-lg ${
+                  theme === 'dark' 
+                    ? 'bg-gray-800 text-gray-100' 
+                    : 'bg-white'
+                }`}
               />
             </div>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className={`text-center py-8 ${
+            theme === 'dark' ? 'text-gray-300' : ''
+          }`}>Loading...</div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6">
             {menuItems
@@ -461,7 +503,11 @@ const AdminMenu = () => {
                 );
               })
               .map((item) => (
-              <div key={item._id} className="group relative bg-gradient-to-br from-white to-gray-50 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100">
+              <div key={item._id} className={`group relative rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border ${
+                theme === 'dark' 
+                  ? 'bg-gray-800 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+              }`}>
                 {/* Status & Category Badges */}
                 <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
                   <span className="inline-block px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full shadow-lg">
@@ -507,7 +553,9 @@ const AdminMenu = () => {
                 {/* Content Section */}
                 <div className="p-5 relative">
                   {/* Decorative Icon */}
-                  <div className="absolute -top-8 left-5 w-14 h-14 bg-white rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500">
+                  <div className={`absolute -top-8 left-5 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500 ${
+                    theme === 'dark' ? 'bg-gray-700' : 'bg-white'
+                  }`}>
                     <span className="text-2xl">
                       {item.category === 'Drinks' ? '🥤' : 
                        item.category === 'Food' ? '🍜' : 
@@ -517,10 +565,14 @@ const AdminMenu = () => {
                   </div>
 
                   <div className="mt-3">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors">
+                    <h3 className={`text-xl font-bold mb-2 group-hover:text-orange-600 transition-colors ${
+                      theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                    }`}>
                       {item.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2 leading-relaxed">
+                    <p className={`text-sm mb-3 line-clamp-2 leading-relaxed ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
                       {item.description}
                     </p>
                     
@@ -530,7 +582,11 @@ const AdminMenu = () => {
                         {item.tags.map((tag, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-200"
+                            className={`px-2 py-1 text-xs font-semibold rounded-full border ${
+                              theme === 'dark'
+                                ? 'bg-purple-900/30 text-purple-300 border-purple-700'
+                                : 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-200'
+                            }`}
                           >
                             {tag}
                           </span>
@@ -539,13 +595,17 @@ const AdminMenu = () => {
                     )}
                     
                     <div className="flex items-center mb-4">
-                      <span className="text-sm text-gray-500 mr-2">Price:</span>
+                      <span className={`text-sm mr-2 ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>Price:</span>
                       <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                         Rs. {item.price}
                       </span>
                     </div>
 
-                    <div className="flex space-x-2 pt-3 border-t border-gray-100">
+                    <div className={`flex space-x-2 pt-3 border-t ${
+                      theme === 'dark' ? 'border-gray-700' : 'border-gray-100'
+                    }`}>
                       <button
                         onClick={() => handleEdit(item)}
                         className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
@@ -571,12 +631,16 @@ const AdminMenu = () => {
                 (item.category && item.category.toLowerCase().includes(query))
               );
             }).length === 0 && menuItems.length > 0 && (
-              <div className="col-span-3 text-center py-8 text-gray-500">
+              <div className={`col-span-3 text-center py-8 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 No menu items found matching "{searchQuery}"
               </div>
             )}
             {menuItems.length === 0 && (
-              <div className="col-span-3 text-center py-8 text-gray-500">
+              <div className={`col-span-3 text-center py-8 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 No menu items found
               </div>
             )}

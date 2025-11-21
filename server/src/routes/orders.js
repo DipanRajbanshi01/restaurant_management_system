@@ -6,6 +6,8 @@ const {
   getOrder,
   updateOrderStatus,
   updatePaymentStatus,
+  updateOrderNotes,
+  updateEstimatedTime,
 } = require('../controllers/orderController');
 const { auth, authorize } = require('../middleware/auth');
 
@@ -24,6 +26,12 @@ router.put('/:id/status', authorize('chef', 'admin', 'user'), updateOrderStatus)
 
 // User can update payment status
 router.put('/:id/payment', authorize('user'), updatePaymentStatus);
+
+// Update order notes
+router.put('/:id/notes', authorize('user', 'admin'), updateOrderNotes);
+
+// Update estimated time (Chef/Admin only)
+router.put('/:id/estimated-time', authorize('chef', 'admin'), updateEstimatedTime);
 
 module.exports = router;
 

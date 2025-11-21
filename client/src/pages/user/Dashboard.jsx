@@ -6,7 +6,9 @@ import { menuService } from '../../services/menuService';
 import { orderService } from '../../services/orderService';
 import { notificationService } from '../../services/notificationService';
 import { feedbackService } from '../../services/feedbackService';
+import { userService } from '../../services/userService';
 import { toast } from 'react-toastify';
+import { ThemeContext } from '../../context/ThemeContext';
 import UserNavbar from '../../components/navbars/UserNavbar';
 
 const UserDashboard = () => {
@@ -35,6 +37,8 @@ const UserDashboard = () => {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [hoveredFeedbackRating, setHoveredFeedbackRating] = useState(0);
   const [ratingStats, setRatingStats] = useState([]);
+  const [favorites, setFavorites] = useState([]);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -46,7 +50,31 @@ const UserDashboard = () => {
     fetchOrders();
     fetchNotifications();
     fetchRatingStats();
+    fetchFavorites();
   }, []);
+
+  const fetchFavorites = async () => {
+    try {
+      const response = await userService.getFavorites();
+      if (response.success) {
+        setFavorites(response.data.map(item => item._id || item));
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (itemId) => {
+    try {
+      const response = await userService.toggleFavorite(itemId);
+      if (response.success) {
+        setFavorites(response.data.favorites);
+        toast.success(response.data.isFavorite ? 'Added to favorites!' : 'Removed from favorites!');
+      }
+    } catch (error) {
+      toast.error('Failed to update favorites');
+    }
+  };
 
   useEffect(() => {
     if (socket) {
@@ -229,12 +257,20 @@ const UserDashboard = () => {
     } : null;
   };
 
+  const { theme } = useContext(ThemeContext);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
+    <div className={`min-h-screen ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50'
+    }`}>
       {/* Special Instructions Modal */}
       {showInstructionsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+          <div className={`rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all ${
+            theme === 'dark' ? 'bg-gray-800 text-gray-100' : 'bg-white'
+          }`}>
             <h3 className="text-2xl font-bold mb-4 flex items-center">
               <span className="text-3xl mr-3">🍽️</span>
               <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
@@ -243,22 +279,32 @@ const UserDashboard = () => {
             </h3>
             {selectedItem && (
               <div className="mb-4">
-                <p className="text-lg font-semibold text-gray-800">{selectedItem.name}</p>
-                <p className="text-sm text-gray-600">Rs. {selectedItem.price}</p>
+                <p className={`text-lg font-semibold ${
+                  theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                }`}>{selectedItem.name}</p>
+                <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Rs. {selectedItem.price}</p>
               </div>
             )}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
                 💬 Any special requests? (optional)
               </label>
               <textarea
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
                 placeholder="E.g., No onions, Extra spicy, Allergic to nuts, etc."
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none resize-none"
+                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none resize-none ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                    : 'border-gray-200'
+                }`}
                 rows="4"
               />
-              <p className="text-xs text-gray-500 mt-2">
+              <p className={`text-xs mt-2 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 ⚠️ Chef will see these instructions
               </p>
             </div>
@@ -269,7 +315,11 @@ const UserDashboard = () => {
                   setSelectedItem(null);
                   setSpecialInstructions('');
                 }}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-300 transition-all duration-300"
+                className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
               >
                 Cancel
               </button>
@@ -287,7 +337,9 @@ const UserDashboard = () => {
       {/* Feedback Modal */}
       {showFeedbackModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+          <div className={`rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all ${
+            theme === 'dark' ? 'bg-gray-800 text-gray-100' : 'bg-white'
+          }`}>
             <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
               ⭐ Rate This Item
             </h3>
@@ -373,9 +425,9 @@ const UserDashboard = () => {
           <div className={showCart ? 'md:col-span-2' : 'col-span-1'}>
             <div className="flex justify-center items-center mb-6">
               <h2 className="text-3xl text-center font-bold flex items-center gap-3">
-                <span className="text-gray-400">────୨ৎ────</span>
+                <span className={theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}>────୨ৎ────</span>
                 <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">Our Menu</span>
-                <span className="text-gray-400">────୨ৎ────</span>
+                <span className={theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}>────୨ৎ────</span>
               </h2>
             </div>
             
@@ -387,7 +439,11 @@ const UserDashboard = () => {
                   placeholder="🔍 Search for delicious food..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-6 py-4 bg-white rounded-2xl shadow-lg border-2 border-transparent focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 text-lg"
+                  className={`w-full px-6 py-4 rounded-2xl shadow-lg border-2 border-transparent focus:border-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-100 transition-all duration-300 text-lg ${
+                    theme === 'dark' 
+                      ? 'bg-gray-800 text-gray-100 placeholder-gray-400' 
+                      : 'bg-white'
+                  }`}
                 />
               </div>
             </div>
@@ -396,13 +452,14 @@ const UserDashboard = () => {
             <div className="flex flex-wrap gap-3 mb-8">
               {[
                 { name: 'All', icon: '🍽️' },
+                { name: 'Favorites', icon: '❤️', special: true, isFavorites: true },
                 { name: 'Top Rated', icon: '⭐', special: true },
                 { name: 'Food', icon: '🍜' },
                 { name: 'Drinks', icon: '🥤' },
                 { name: 'Desserts', icon: '🍰' },
                 { name: 'Appetizers', icon: '🥟' },
                 { name: 'Others', icon: '🍴' }
-              ].map(({ name, icon, special }) => (
+              ].map(({ name, icon, special, isFavorites }) => (
                 <button
                   key={name}
                   onClick={() => setSelectedCategory(name)}
@@ -411,7 +468,9 @@ const UserDashboard = () => {
                       ? special 
                         ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg scale-105'
                         : 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
-                      : 'bg-white text-gray-700 hover:shadow-lg border border-gray-200'
+                      : theme === 'dark'
+                        ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700'
+                        : 'bg-white text-gray-700 hover:shadow-lg border border-gray-200'
                   }`}
                 >
                   <span>{icon}</span>
@@ -449,7 +508,11 @@ const UserDashboard = () => {
                   .map((item) => (
                   <div
                     key={item._id}
-                    className="group relative bg-gradient-to-br from-white to-gray-50 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border border-gray-100"
+                    className={`group relative rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 border ${
+                      theme === 'dark'
+                        ? 'bg-gray-800 border-gray-700'
+                        : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+                    }`}
                   >
                     {/* Category Badge - Floating */}
                     <div className="absolute top-4 right-4 z-10">
@@ -488,8 +551,28 @@ const UserDashboard = () => {
 
                     {/* Content Section */}
                     <div className="p-6 relative">
+                      {/* Favorite Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(item._id);
+                        }}
+                        className={`absolute top-4 right-4 z-10 p-2 rounded-full backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-110 ${
+                          theme === 'dark' 
+                            ? 'bg-gray-700/90 hover:bg-gray-700' 
+                            : 'bg-white/90 hover:bg-white'
+                        }`}
+                        title={favorites.includes(item._id) ? 'Remove from favorites' : 'Add to favorites'}
+                      >
+                        <span className={`text-2xl ${favorites.includes(item._id) ? 'text-red-500' : 'text-gray-400'}`}>
+                          {favorites.includes(item._id) ? '❤️' : '🤍'}
+                        </span>
+                      </button>
+                      
                       {/* Decorative Element */}
-                      <div className="absolute -top-8 left-6 w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500">
+                      <div className={`absolute -top-8 left-6 w-16 h-16 rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500 ${
+                        theme === 'dark' ? 'bg-gray-700' : 'bg-white'
+                      }`}>
                         <span className="text-2xl">
                           {item.category === 'Drinks' ? '🥤' : 
                            item.category === 'Food' ? '🍜' : 
@@ -499,10 +582,14 @@ const UserDashboard = () => {
                       </div>
 
                       <div className="mt-4">
-                        <h3 className="text-2xl font-bold text-gray-800 mb-2 group-hover:text-orange-600 transition-colors">
+                        <h3 className={`text-2xl font-bold mb-2 group-hover:text-orange-600 transition-colors ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                        }`}>
                           {item.name}
                         </h3>
-                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                        <p className={`mb-4 line-clamp-2 leading-relaxed ${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                        }`}>
                           {item.description}
                         </p>
                         
@@ -510,7 +597,9 @@ const UserDashboard = () => {
                         {(() => {
                           const rating = getItemRating(item._id);
                           return rating ? (
-                            <div className="flex items-center space-x-2 mb-3 pb-3 border-b border-gray-100">
+                            <div className={`flex items-center space-x-2 mb-3 pb-3 border-b ${
+                              theme === 'dark' ? 'border-gray-700' : 'border-gray-100'
+                            }`}>
                               <div className="flex items-center">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <span
@@ -535,9 +624,13 @@ const UserDashboard = () => {
                           ) : null;
                         })()}
                         
-                        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                        <div className={`flex justify-between items-center pt-4 border-t ${
+                          theme === 'dark' ? 'border-gray-700' : 'border-gray-100'
+                        }`}>
                           <div className="flex flex-col">
-                            <span className="text-sm text-gray-500 font-medium">Price</span>
+                            <span className={`text-sm font-medium ${
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            }`}>Price</span>
                             <span className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                               Rs. {item.price}
                             </span>
@@ -554,7 +647,11 @@ const UserDashboard = () => {
                         {/* Rate Item Button */}
                         <button
                           onClick={() => openFeedbackModal(item)}
-                          className="w-full mt-3 px-4 py-2 bg-yellow-100 text-yellow-700 rounded-2xl font-semibold hover:bg-yellow-200 transition-all duration-300 flex items-center justify-center space-x-2 border-2 border-yellow-300"
+                          className={`w-full mt-3 px-4 py-2 rounded-2xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 border-2 ${
+                            theme === 'dark'
+                              ? 'bg-yellow-900/30 text-yellow-300 hover:bg-yellow-900/50 border-yellow-700'
+                              : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300'
+                          }`}
                         >
                           <span>⭐</span>
                           <span>Rate this item</span>
@@ -580,7 +677,9 @@ const UserDashboard = () => {
                   }
                   return matchesSearch && matchesCategory;
                 }).length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-gray-500">
+                  <div className={`col-span-2 text-center py-8 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
                     No menu items found {searchQuery && `matching "${searchQuery}"`} 
                     {selectedCategory !== 'All' && ` in ${selectedCategory}`}
                   </div>
@@ -592,7 +691,11 @@ const UserDashboard = () => {
           {/* Cart Sidebar */}
           <div className="md:col-span-1">
             {showCart && (
-              <div className="bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-2xl p-6 sticky top-24 border border-gray-100">
+              <div className={`rounded-3xl shadow-2xl p-6 sticky top-24 border ${
+                theme === 'dark' 
+                  ? 'bg-gray-800 border-gray-700' 
+                  : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+              }`}>
                 <h2 className="text-2xl font-bold mb-4 flex items-center">
                   <span className="text-3xl mr-3">🛒</span>
                   <span className="bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
@@ -600,25 +703,39 @@ const UserDashboard = () => {
                   </span>
                 </h2>
                 {cart.length === 0 ? (
-                  <p className="text-gray-500">Cart is empty</p>
+                  <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Cart is empty</p>
                 ) : (
                   <>
                     <div className="space-y-4 mb-4">
                       {cart.map((cartItem, idx) => (
                         <div
                           key={`${cartItem.item._id}-${idx}`}
-                          className="border-b pb-3"
+                          className={`border-b pb-3 ${
+                            theme === 'dark' ? 'border-gray-700' : ''
+                          }`}
                         >
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
-                              <p className="font-semibold">{cartItem.item.name}</p>
-                              <p className="text-sm text-gray-600">
+                              <p className={`font-semibold ${
+                                theme === 'dark' ? 'text-gray-100' : ''
+                              }`}>{cartItem.item.name}</p>
+                              <p className={`text-sm ${
+                                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
                                 Rs. {cartItem.price} x {cartItem.quantity}
                               </p>
                               {cartItem.specialInstructions && (
-                                <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                  <p className="text-xs font-semibold text-yellow-800">📝 Special Instructions:</p>
-                                  <p className="text-xs text-yellow-700">{cartItem.specialInstructions}</p>
+                                <div className={`mt-1 p-2 border rounded-lg ${
+                                  theme === 'dark'
+                                    ? 'bg-yellow-900/30 border-yellow-700'
+                                    : 'bg-yellow-50 border-yellow-200'
+                                }`}>
+                                  <p className={`text-xs font-semibold ${
+                                    theme === 'dark' ? 'text-yellow-300' : 'text-yellow-800'
+                                  }`}>📝 Special Instructions:</p>
+                                  <p className={`text-xs ${
+                                    theme === 'dark' ? 'text-yellow-200' : 'text-yellow-700'
+                                  }`}>{cartItem.specialInstructions}</p>
                                 </div>
                               )}
                             </div>
@@ -627,14 +744,24 @@ const UserDashboard = () => {
                             <div className="flex items-center space-x-2">
                             <button
                               onClick={() => updateQuantity(idx, cartItem.quantity - 1)}
-                              className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                              className={`px-2 py-1 rounded ${
+                                theme === 'dark' 
+                                  ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                                  : 'bg-gray-200 hover:bg-gray-300'
+                              }`}
                             >
                               -
                             </button>
-                            <span className="font-semibold">{cartItem.quantity}</span>
+                            <span className={`font-semibold ${
+                              theme === 'dark' ? 'text-gray-200' : ''
+                            }`}>{cartItem.quantity}</span>
                             <button
                               onClick={() => updateQuantity(idx, cartItem.quantity + 1)}
-                              className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                              className={`px-2 py-1 rounded ${
+                                theme === 'dark' 
+                                  ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                                  : 'bg-gray-200 hover:bg-gray-300'
+                              }`}
                             >
                               +
                             </button>
@@ -644,7 +771,7 @@ const UserDashboard = () => {
                                 updatedCart.splice(idx, 1);
                                 setCart(updatedCart);
                               }}
-                              className="text-red-500 hover:text-red-700 font-bold"
+                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                             >
                               🗑️
                             </button>
@@ -654,13 +781,19 @@ const UserDashboard = () => {
                       ))}
                     </div>
                     <div className="mb-4">
-                      <label className="block text-sm font-medium mb-2">
+                      <label className={`block text-sm font-medium mb-2 ${
+                        theme === 'dark' ? 'text-gray-200' : ''
+                      }`}>
                         Payment Method
                       </label>
                       <select
                         value={paymentMethod}
                         onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full px-3 py-2 border rounded-lg"
+                        className={`w-full px-3 py-2 border rounded-lg ${
+                          theme === 'dark' 
+                            ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                            : ''
+                        }`}
                       >
                         <option value="card">Card</option>
                         <option value="cash">Cash</option>
@@ -668,7 +801,9 @@ const UserDashboard = () => {
                       </select>
                     </div>
                     <div className="mb-4">
-                      <p className="text-xl font-bold">
+                      <p className={`text-xl font-bold ${
+                        theme === 'dark' ? 'text-gray-100' : ''
+                      }`}>
                         Total: Rs. {getTotalPrice().toFixed(2)}
                       </p>
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
 
 const Register = () => {
@@ -12,6 +13,7 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const { register } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -52,12 +54,24 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center px-4 py-8">
-      <div className="bg-gradient-to-br from-white to-gray-50 p-10 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 transform hover:scale-[1.02] transition-all duration-300 relative">
+    <div className={`min-h-screen flex items-center justify-center px-4 py-8 ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50'
+    }`}>
+      <div className={`p-10 rounded-3xl shadow-2xl w-full max-w-md border transform hover:scale-[1.02] transition-all duration-300 relative ${
+        theme === 'dark' 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+      }`}>
         {/* Home Button */}
         <Link 
           to="/" 
-          className="absolute top-6 left-6 flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-all duration-300 group"
+          className={`absolute top-6 left-6 flex items-center space-x-2 transition-all duration-300 group ${
+            theme === 'dark' 
+              ? 'text-gray-300 hover:text-orange-500' 
+              : 'text-gray-600 hover:text-orange-600'
+          }`}
         >
           <span className="text-2xl group-hover:scale-110 transition-transform duration-300">🏠</span>
           <span className="font-semibold hidden sm:inline">Home</span>

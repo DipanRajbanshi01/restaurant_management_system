@@ -7,6 +7,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import FAQ from './pages/FAQ';
+import Terms from './pages/Terms';
 import UserDashboard from './pages/user/Dashboard';
 import UserOrders from './pages/user/Orders';
 import UserFeedback from './pages/user/Feedback';
@@ -20,6 +22,7 @@ import AdminChatLogs from './pages/admin/ChatLogs';
 // Context
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Protected Route Component
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -35,13 +38,16 @@ import AdminMenu from './pages/admin/Menu';
 function App() {
   return (
     <AuthProvider>
-      <SocketProvider>
-        <Router future={{ v7_relativeSplatPath: true }}>
-          <div className="App">
+      <ThemeProvider>
+        <SocketProvider>
+          <Router future={{ v7_relativeSplatPath: true }}>
+            <div className="App">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/faq" element={<FAQ />} />
+            <Route path="/terms" element={<Terms />} />
             
             {/* User Routes */}
             <Route
@@ -149,9 +155,10 @@ function App() {
           </Routes>
             <Chatbot />
             <ToastContainer position="top-right" autoClose={3000} />
-          </div>
-        </Router>
-      </SocketProvider>
+            </div>
+          </Router>
+        </SocketProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

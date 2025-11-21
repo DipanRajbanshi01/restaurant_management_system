@@ -50,6 +50,15 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
+  notes: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  estimatedTime: {
+    type: Number, // in minutes
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

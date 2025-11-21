@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
 
 const Login = () => {
@@ -10,6 +11,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -38,12 +40,24 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center px-4">
-      <div className="bg-gradient-to-br from-white to-gray-50 p-10 rounded-3xl shadow-2xl w-full max-w-md border border-gray-100 transform hover:scale-[1.02] transition-all duration-300 relative">
+    <div className={`min-h-screen flex items-center justify-center px-4 ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50'
+    }`}>
+      <div className={`p-10 rounded-3xl shadow-2xl w-full max-w-md border transform hover:scale-[1.02] transition-all duration-300 relative ${
+        theme === 'dark' 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
+      }`}>
         {/* Home Button */}
         <Link 
           to="/" 
-          className="absolute top-6 left-6 flex items-center space-x-2 text-gray-600 hover:text-orange-600 transition-all duration-300 group"
+          className={`absolute top-6 left-6 flex items-center space-x-2 transition-all duration-300 group ${
+            theme === 'dark' 
+              ? 'text-gray-300 hover:text-orange-500' 
+              : 'text-gray-600 hover:text-orange-600'
+          }`}
         >
           <span className="text-2xl group-hover:scale-110 transition-transform duration-300">🏠</span>
           <span className="font-semibold hidden sm:inline">Home</span>
@@ -56,11 +70,13 @@ const Login = () => {
               Welcome Back
             </span>
           </h2>
-          <p className="text-gray-600">Login to your account</p>
+          <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Login to your account</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="email" className={`block text-sm font-semibold mb-2 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+            }`}>
               📧 Email Address
             </label>
             <input
@@ -70,13 +86,19 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-5 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none text-lg"
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none text-lg ${
+                theme === 'dark' 
+                  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                  : 'border-gray-200'
+              }`}
               placeholder="your@email.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+            <label htmlFor="password" className={`block text-sm font-semibold mb-2 ${
+              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+            }`}>
               🔒 Password
             </label>
             <input
@@ -86,7 +108,11 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-5 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none text-lg"
+              className={`w-full px-5 py-3 border-2 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none text-lg ${
+                theme === 'dark' 
+                  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                  : 'border-gray-200'
+              }`}
               placeholder="••••••••"
             />
           </div>
@@ -99,7 +125,11 @@ const Login = () => {
             {loading ? '⏳ Logging in...' : '🚀 Login'}
           </button>
 
-          <p className="text-center text-gray-600 pt-4 border-t border-gray-200">
+          <p className={`text-center pt-4 border-t ${
+            theme === 'dark' 
+              ? 'text-gray-300 border-gray-700' 
+              : 'text-gray-600 border-gray-200'
+          }`}>
             Don't have an account?{' '}
             <Link to="/register" className="text-orange-600 font-semibold hover:text-orange-700 hover:underline">
               Register here ✨

@@ -29,6 +29,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MenuItem',
+  }],
+  theme: {
+    type: String,
+    enum: ['light', 'dark'],
+    default: 'light',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

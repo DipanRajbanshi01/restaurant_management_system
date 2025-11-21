@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import { ThemeContext } from '../../context/ThemeContext';
 import { orderService } from '../../services/orderService';
 import { feedbackService } from '../../services/feedbackService';
 import { toast } from 'react-toastify';
 import UserNavbar from '../../components/navbars/UserNavbar';
+import PrintReceipt from '../../components/common/PrintReceipt';
 
 const UserOrders = () => {
   const { user, logout } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
   const location = useLocation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +22,11 @@ const UserOrders = () => {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [hoveredRating, setHoveredRating] = useState(0);
   const [orderFeedbacks, setOrderFeedbacks] = useState({}); // Track which orders have feedback
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [printOrder, setPrintOrder] = useState(null);
+  const [editingNotes, setEditingNotes] = useState(null);
+  const [orderNotes, setOrderNotes] = useState('');
 
   const fetchOrders = async () => {
     try {
@@ -132,6 +140,20 @@ const UserOrders = () => {
     (order) => ['completed', 'cancelled'].includes(order.status)
   );
 
+  // Filter orders based on search and status
+  const filterOrders = (orderList) => {
+    return orderList.filter((order) => {
+      const matchesSearch = searchQuery === '' || 
+        order._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.items?.some(item => item.item?.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  const filteredOngoingOrders = filterOrders(ongoingOrders);
+  const filteredHistoryOrders = filterOrders(historyOrders);
+
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -192,20 +214,32 @@ const UserOrders = () => {
   }, [orders]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50">
+    <div className={`min-h-screen ${
+      theme === 'dark' 
+        ? 'bg-gray-900 text-gray-100' 
+        : 'bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50'
+    }`}>
       {/* Feedback Modal */}
       {showFeedbackModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+          <div className={`rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          }`}>
             <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
               ⭐ Rate Your Order Experience
             </h3>
             <div className="mb-4">
-              <p className="text-lg font-semibold text-gray-800">Order #{selectedOrder._id.slice(-6)}</p>
-              <p className="text-sm text-gray-600">Total: Rs. {selectedOrder.totalPrice}</p>
+              <p className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+              }`}>Order #{selectedOrder._id.slice(-6)}</p>
+              <p className={`text-sm ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>Total: Rs. {selectedOrder.totalPrice}</p>
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
                 Rating <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center space-x-1">
@@ -226,25 +260,35 @@ const UserOrders = () => {
                   </button>
                 ))}
                 {feedbackRating > 0 && (
-                  <span className="ml-3 text-sm font-semibold text-gray-600">
+                  <span className={`ml-3 text-sm font-semibold ${
+                    theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
                     {feedbackRating} out of 5
                   </span>
                 )}
               </div>
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className={`block text-sm font-semibold mb-2 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
                 Comment (Optional)
               </label>
               <textarea
                 value={feedbackComment}
                 onChange={(e) => setFeedbackComment(e.target.value)}
                 placeholder="Tell us about your order experience..."
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-400 transition-all duration-300 outline-none resize-none"
+                className={`w-full px-4 py-3 border-2 rounded-2xl focus:ring-4 focus:ring-yellow-100 focus:border-yellow-400 transition-all duration-300 outline-none resize-none ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400'
+                    : 'border-gray-200'
+                }`}
                 rows="4"
                 maxLength="500"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs mt-1 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 {feedbackComment.length}/500 characters
               </p>
             </div>
@@ -256,7 +300,11 @@ const UserOrders = () => {
                   setFeedbackRating(0);
                   setFeedbackComment('');
                 }}
-                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-300 transition-all duration-300"
+                className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
               >
                 Cancel
               </button>
@@ -274,6 +322,66 @@ const UserOrders = () => {
       {/* Navbar */}
       <UserNavbar orders={orders} />
 
+      {/* Print Receipt Modal */}
+      {printOrder && (
+        <PrintReceipt order={printOrder} onClose={() => setPrintOrder(null)} />
+      )}
+
+      {/* Notes Modal */}
+      {editingNotes && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-2xl p-6 max-w-md w-full ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <h3 className={`text-2xl font-bold mb-4 ${
+              theme === 'dark' ? 'text-gray-100' : ''
+            }`}>📝 Order Notes</h3>
+            <textarea
+              value={orderNotes}
+              onChange={(e) => setOrderNotes(e.target.value)}
+              placeholder="Add any notes or comments about this order..."
+              className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none mb-4 ${
+                theme === 'dark' 
+                  ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                  : 'border-gray-200'
+              }`}
+              rows="4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setEditingNotes(null);
+                  setOrderNotes('');
+                }}
+                className={`flex-1 px-6 py-3 rounded-xl font-semibold ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await orderService.updateOrderNotes(editingNotes, orderNotes);
+                    toast.success('Order notes updated!');
+                    setEditingNotes(null);
+                    setOrderNotes('');
+                    fetchOrders();
+                  } catch (error) {
+                    toast.error('Failed to update notes');
+                  }
+                }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-red-600"
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2 flex items-center">
@@ -282,7 +390,7 @@ const UserOrders = () => {
               My Orders
             </span>
           </h1>
-          <p className="text-gray-600">Track your orders and view order history</p>
+          <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}>Track your orders and view order history</p>
         </div>
 
         {/* Tab Navigation */}
@@ -292,7 +400,9 @@ const UserOrders = () => {
             className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-300 ${
               activeTab === 'ongoing'
                 ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                : theme === 'dark'
+                  ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border-2 border-gray-700'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
             }`}
           >
             🔥 Ongoing Orders
@@ -307,7 +417,9 @@ const UserOrders = () => {
             className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-300 ${
               activeTab === 'history'
                 ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+                : theme === 'dark'
+                  ? 'bg-gray-800 text-gray-200 hover:bg-gray-700 border-2 border-gray-700'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
             }`}
           >
             📜 Order History
@@ -321,19 +433,25 @@ const UserOrders = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-orange-500"></div>
-            <p className="mt-4 text-gray-600">Loading orders...</p>
+            <div className={`inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-orange-500 ${
+              theme === 'dark' ? 'border-gray-600' : 'border-gray-300'
+            }`}></div>
+            <p className={`mt-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Loading orders...</p>
           </div>
         ) : (
           <div>
             {/* Ongoing Orders */}
             {activeTab === 'ongoing' && (
               <div className="space-y-4">
-                {ongoingOrders.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-12 text-center shadow-lg">
+                {filteredOngoingOrders.length === 0 ? (
+                  <div className={`rounded-3xl p-12 text-center shadow-lg ${
+                    theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                  }`}>
                     <span className="text-6xl mb-4 block">🍽️</span>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Ongoing Orders</h3>
-                    <p className="text-gray-500">You don't have any active orders right now.</p>
+                    <h3 className={`text-xl font-semibold mb-2 ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                    }`}>No Ongoing Orders</h3>
+                    <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>You don't have any active orders right now.</p>
                     <Link
                       to="/user/dashboard"
                       className="mt-6 inline-block px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-300"
@@ -342,24 +460,30 @@ const UserOrders = () => {
                     </Link>
                   </div>
                 ) : (
-                  ongoingOrders.map((order) => (
+                  filteredOngoingOrders.map((order) => (
                     <div
                       key={order._id}
-                      className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100 hover:shadow-xl transition-all duration-300"
+                      className={`rounded-3xl p-6 shadow-lg border-2 hover:shadow-xl transition-all duration-300 ${
+                        theme === 'dark' 
+                          ? 'bg-gray-800 border-gray-700' 
+                          : 'bg-white border-gray-100'
+                      }`}
                     >
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center flex-wrap gap-3 mb-3">
-                            <h3 className="text-xl font-bold text-gray-800">
+                            <h3 className={`text-xl font-bold ${
+                              theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                            }`}>
                               Order #{order._id.slice(-6)}
                             </h3>
                             <span
                               className={`px-4 py-1 rounded-full text-sm font-semibold ${
                                 order.status === 'ready'
-                                  ? 'bg-green-100 text-green-800'
+                                  ? theme === 'dark' ? 'bg-green-800 text-green-100' : 'bg-green-100 text-green-800'
                                   : order.status === 'cooking'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                  ? theme === 'dark' ? 'bg-yellow-800 text-yellow-100' : 'bg-yellow-100 text-yellow-800'
+                                  : theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
                               }`}
                             >
                               {order.status === 'ready' ? '✓ Ready' : order.status === 'cooking' ? '🍳 Cooking' : '⏳ Pending'}
@@ -372,31 +496,43 @@ const UserOrders = () => {
                             <span
                               className={`px-4 py-1 rounded-full text-sm font-semibold ${
                                 order.paymentStatus === 'paid'
-                                  ? 'bg-green-100 text-green-800'
+                                  ? theme === 'dark' ? 'bg-green-800 text-green-100' : 'bg-green-100 text-green-800'
                                   : order.paymentStatus === 'cancelled'
-                                  ? 'bg-gray-100 text-gray-800'
-                                  : 'bg-red-100 text-red-800'
+                                  ? theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
+                                  : theme === 'dark' ? 'bg-red-800 text-red-100' : 'bg-red-100 text-red-800'
                               }`}
                             >
                               {order.paymentStatus === 'paid' ? '💳 Paid' : order.paymentStatus === 'cancelled' ? '✕ Cancelled' : '💰 Unpaid'}
                             </span>
                           </div>
                           
-                          <div className="bg-gray-50 rounded-2xl p-4 mb-3">
-                            <h4 className="font-semibold text-gray-700 mb-2 flex items-center">
+                          <div className={`rounded-2xl p-4 mb-3 ${
+                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
+                          }`}>
+                            <h4 className={`font-semibold mb-2 flex items-center ${
+                              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                            }`}>
                               <span className="mr-2">🍽️</span> Items:
                             </h4>
                             <div className="space-y-1">
                               {order.items?.map((item, idx) => (
-                                <div key={idx} className="text-gray-600 flex items-start">
+                                <div key={idx} className={`flex items-start ${
+                                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                                }`}>
                                   <span className="mr-2">•</span>
                                   <div className="flex-1">
                                     <span className="font-medium">{item.item?.name || 'N/A'}</span>
-                                    <span className="text-gray-500"> x {item.quantity}</span>
+                                    <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}> x {item.quantity}</span>
                                     {item.specialInstructions && (
-                                      <div className="mt-1 ml-4 p-2 bg-yellow-50 border-l-4 border-yellow-400 rounded text-xs">
-                                        <span className="font-semibold text-yellow-800">📝 Note:</span>
-                                        <span className="text-yellow-700"> {item.specialInstructions}</span>
+                                      <div className={`mt-1 ml-4 p-2 border-l-4 rounded text-xs ${
+                                        theme === 'dark'
+                                          ? 'bg-yellow-900/30 border-yellow-700'
+                                          : 'bg-yellow-50 border-yellow-400'
+                                      }`}>
+                                        <span className={`font-semibold ${
+                                          theme === 'dark' ? 'text-yellow-300' : 'text-yellow-800'
+                                        }`}>📝 Note:</span>
+                                        <span className={theme === 'dark' ? 'text-yellow-200' : 'text-yellow-700'}> {item.specialInstructions}</span>
                                       </div>
                                     )}
                                   </div>
@@ -405,14 +541,18 @@ const UserOrders = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className={`flex items-center justify-between text-sm ${
+                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
                             <span>📅 {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</span>
                           </div>
                         </div>
 
                         <div className="lg:text-right space-y-3">
                           <div>
-                            <p className="text-sm text-gray-600">Total Amount</p>
+                            <p className={`text-sm ${
+                              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                            }`}>Total Amount</p>
                             <p className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                               Rs. {order.totalPrice}
                             </p>
@@ -446,29 +586,63 @@ const UserOrders = () => {
             {/* Order History */}
             {activeTab === 'history' && (
               <div className="space-y-4">
-                {historyOrders.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-12 text-center shadow-lg">
+                {filteredHistoryOrders.length === 0 ? (
+                  <div className={`rounded-3xl p-12 text-center shadow-lg ${
+                    theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                  }`}>
                     <span className="text-6xl mb-4 block">📜</span>
-                    <h3 className="text-xl font-semibold text-gray-700 mb-2">No Order History</h3>
-                    <p className="text-gray-500">You haven't completed any orders yet.</p>
+                    <h3 className={`text-xl font-semibold mb-2 ${
+                      theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      {historyOrders.length === 0 ? 'No Order History' : 'No Orders Match Your Search'}
+                    </h3>
+                    <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>
+                      {historyOrders.length === 0 
+                        ? "You haven't completed any orders yet."
+                        : 'Try adjusting your search or filter criteria.'}
+                    </p>
                   </div>
                 ) : (
-                  historyOrders.map((order) => (
+                  filteredHistoryOrders.map((order) => (
                     <div
                       key={order._id}
-                      className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100 hover:shadow-xl transition-all duration-300 opacity-90"
+                      className={`rounded-3xl p-6 shadow-lg border-2 hover:shadow-xl transition-all duration-300 opacity-90 ${
+                        theme === 'dark' 
+                          ? 'bg-gray-800 border-gray-700' 
+                          : 'bg-white border-gray-100'
+                      }`}
                     >
+                      {/* Print and Notes buttons for history orders */}
+                      <div className="flex justify-end gap-2 mb-3">
+                        <button
+                          onClick={() => setPrintOrder(order)}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                        >
+                          🖨️ Print
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingNotes(order._id);
+                            setOrderNotes(order.notes || '');
+                          }}
+                          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm"
+                        >
+                          📝 Notes
+                        </button>
+                      </div>
                       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center flex-wrap gap-3 mb-3">
-                            <h3 className="text-xl font-bold text-gray-800">
+                            <h3 className={`text-xl font-bold ${
+                              theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                            }`}>
                               Order #{order._id.slice(-6)}
                             </h3>
                             <span
                               className={`px-4 py-1 rounded-full text-sm font-semibold ${
                                 order.status === 'completed'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-red-100 text-red-800'
+                                  ? theme === 'dark' ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-800'
+                                  : theme === 'dark' ? 'bg-red-800 text-red-100' : 'bg-red-100 text-red-800'
                               }`}
                             >
                               {order.status === 'completed' ? '✓ Completed' : '✗ Cancelled'}
@@ -476,46 +650,60 @@ const UserOrders = () => {
                             <span
                               className={`px-4 py-1 rounded-full text-sm font-semibold ${
                                 order.paymentStatus === 'paid'
-                                  ? 'bg-green-100 text-green-800'
+                                  ? theme === 'dark' ? 'bg-green-800 text-green-100' : 'bg-green-100 text-green-800'
                                   : order.paymentStatus === 'cancelled'
-                                  ? 'bg-gray-100 text-gray-800'
-                                  : 'bg-red-100 text-red-800'
+                                  ? theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
+                                  : theme === 'dark' ? 'bg-red-800 text-red-100' : 'bg-red-100 text-red-800'
                               }`}
                             >
                               {order.paymentStatus === 'paid' ? '💳 Paid' : order.paymentStatus === 'cancelled' ? '✕ Cancelled' : '💰 Unpaid'}
                             </span>
                           </div>
                           
-                          <div className="bg-gray-50 rounded-2xl p-4 mb-3">
-                            <h4 className="font-semibold text-gray-700 mb-2 flex items-center">
+                          <div className={`rounded-2xl p-4 mb-3 ${
+                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
+                          }`}>
+                            <h4 className={`font-semibold mb-2 flex items-center ${
+                              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                            }`}>
                               <span className="mr-2">🍽️</span> Items:
                             </h4>
                             <div className="space-y-1">
                               {order.items?.map((item, idx) => (
-                                <div key={idx} className="text-gray-600">
+                                <div key={idx} className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
                                   <span className="mr-2">•</span>
                                   <span className="font-medium">{item.item?.name || 'N/A'}</span>
-                                  <span className="text-gray-500"> x {item.quantity}</span>
+                                  <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}> x {item.quantity}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className={`flex items-center justify-between text-sm ${
+                            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
                             <span>📅 {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString()}</span>
                           </div>
                         </div>
 
                         <div className="lg:text-right space-y-3">
                           <div>
-                            <p className="text-sm text-gray-600">Total Amount</p>
-                            <p className="text-3xl font-bold text-gray-700">
+                            <p className={`text-sm ${
+                              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                            }`}>Total Amount</p>
+                            <p className={`text-3xl font-bold ${
+                              theme === 'dark' ? 'text-gray-100' : 'text-gray-700'
+                            }`}>
                               Rs. {order.totalPrice}
                             </p>
                           </div>
                           {order.status === 'completed' && (
-                            orderFeedbacks[order._id] ? (
-                              <div className="w-full lg:w-auto px-6 py-3 bg-green-100 text-green-700 rounded-2xl font-semibold border-2 border-green-300 text-center">
+                              orderFeedbacks[order._id] ? (
+                              <div className={`w-full lg:w-auto px-6 py-3 rounded-2xl font-semibold border-2 text-center ${
+                                theme === 'dark'
+                                  ? 'bg-green-900/30 text-green-300 border-green-700'
+                                  : 'bg-green-100 text-green-700 border-green-300'
+                              }`}>
                                 ✓ Feedback Submitted
                               </div>
                             ) : (

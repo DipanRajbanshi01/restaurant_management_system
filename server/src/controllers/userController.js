@@ -6,7 +6,9 @@ const bcrypt = require('bcryptjs');
 // @access  Private
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate('favorites', 'name price image category');
     
     if (!user) {
       return res.status(404).json({
@@ -34,7 +36,7 @@ const getProfile = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { name, email, phone } = req.body;
+    const { name, email, phone, theme } = req.body;
 
     const user = await User.findById(req.user.id);
 
@@ -59,6 +61,7 @@ const updateProfile = async (req, res) => {
 
     if (name) user.name = name.trim();
     if (phone !== undefined) user.phone = phone.trim();
+    if (theme && ['light', 'dark'].includes(theme)) user.theme = theme;
 
     await user.save();
 
@@ -71,6 +74,8 @@ const updateProfile = async (req, res) => {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        theme: user.theme,
+        favorites: user.favorites,
       },
     });
   } catch (error) {
@@ -141,8 +146,126 @@ const updatePassword = async (req, res) => {
   }
 };
 
+// @desc    Toggle favorite item
+// @route   POST /api/users/favorites/:itemId
+// @access  Private
+const toggleFavorite = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const itemId = req.params.itemId;
+    const index = user.favorites.indexOf(itemId);
+
+    if (index > -1) {
+      // Remove from favorites
+      user.favorites.splice(index, 1);
+      await user.save();
+      res.json({
+        success: true,
+        message: 'Item removed from favorites',
+        data: { isFavorite: false, favorites: user.favorites },
+      });
+    } else {
+      // Add to favorites
+      user.favorites.push(itemId);
+      await user.save();
+      res.json({
+        success: true,
+        message: 'Item added to favorites',
+        data: { isFavorite: true, favorites: user.favorites },
+      });
+    }
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+// @desc    Get favorites
+// @route   GET /api/users/favorites
+// @access  Private
+const getFavorites = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).populate('favorites');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.favorites,
+    });
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+// @desc    Update theme preference
+// @route   PUT /api/users/theme
+// @access  Private
+const updateTheme = async (req, res) => {
+  try {
+    const { theme } = req.body;
+
+    if (!theme || !['light', 'dark'].includes(theme)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Theme must be either "light" or "dark"',
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    user.theme = theme;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Theme updated successfully',
+      data: { theme: user.theme },
+    });
+  } catch (error) {
+    console.error('Update theme error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   updatePassword,
+  toggleFavorite,
+  getFavorites,
+  updateTheme,
 };

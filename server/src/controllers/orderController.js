@@ -6,7 +6,7 @@ const Notification = require('../models/Notification');
 // @access  User only
 const createOrder = async (req, res) => {
   try {
-    const { items, totalPrice, paymentMethod } = req.body;
+    const { items, totalPrice, paymentMethod, notes, estimatedTime } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({
@@ -22,6 +22,8 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus: 'pending',
       status: 'pending',
+      notes: notes || '',
+      estimatedTime: estimatedTime || null,
     });
 
     const populatedOrder = await Order.findById(order._id)
@@ -251,10 +253,85 @@ const updatePaymentStatus = async (req, res) => {
   }
 };
 
+// @desc    Update order notes
+// @route   PUT /api/orders/:id/notes
+// @access  User/Admin
+const updateOrderNotes = async (req, res) => {
+  try {
+    const { notes } = req.body;
+
+    let query = { _id: req.params.id };
+    if (req.user.role === 'user') {
+      query.user = req.user.id;
+    }
+
+    const order = await Order.findOne(query);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    order.notes = notes || '';
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Order notes updated successfully',
+      data: order,
+    });
+  } catch (error) {
+    console.error('Update order notes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+// @desc    Update estimated time
+// @route   PUT /api/orders/:id/estimated-time
+// @access  Chef/Admin
+const updateEstimatedTime = async (req, res) => {
+  try {
+    const { estimatedTime } = req.body;
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    order.estimatedTime = estimatedTime || null;
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Estimated time updated successfully',
+      data: order,
+    });
+  } catch (error) {
+    console.error('Update estimated time error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
   getOrder,
   updateOrderStatus,
   updatePaymentStatus,
+  updateOrderNotes,
+  updateEstimatedTime,
 };

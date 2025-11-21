@@ -25,5 +25,15 @@ export const orderService = {
     const response = await api.put(`/orders/${id}/payment`, { paymentStatus });
     return response.data;
   },
+
+  updateOrderNotes: async (id, notes) => {
+    const response = await api.put(`/orders/${id}/notes`, { notes });
+    return response.data;
+  },
+
+  updateEstimatedTime: async (id, estimatedTime) => {
+    const response = await api.put(`/orders/${id}/estimated-time`, { estimatedTime });
+    return response.data;
+  },
 };
 
