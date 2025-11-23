@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import Logo from '../components/Logo';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 const Home = () => {
   const { theme } = useContext(ThemeContext);
@@ -13,11 +14,16 @@ const Home = () => {
         : 'bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50'
     }`}>
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg shadow-xl border-b border-gray-100 sticky top-0 z-50">
+      <header className={`backdrop-blur-lg shadow-xl border-b sticky top-0 z-50 ${
+        theme === 'dark'
+          ? 'bg-gray-800/80 border-gray-700'
+          : 'bg-white/80 border-gray-100'
+      }`}>
         <div className="container mx-auto px-4 py-5">
           <div className="flex justify-between items-center">
             <Logo />
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-3">
+              <ThemeToggle />
               <Link
                 to="/register"
                 className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full font-semibold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -26,7 +32,11 @@ const Home = () => {
               </Link>
               <Link
                 to="/login"
-                className="px-6 py-2.5 bg-white text-gray-700 border-2 border-gray-200 rounded-full font-semibold hover:border-orange-400 hover:shadow-lg transform hover:scale-105 transition-all duration-300"
+                className={`px-6 py-2.5 rounded-full font-semibold border-2 transform hover:scale-105 transition-all duration-300 ${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-gray-200 border-gray-600 hover:border-orange-400 hover:shadow-lg'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:shadow-lg'
+                }`}
               >
                 Login
               </Link>
@@ -44,7 +54,9 @@ const Home = () => {
               Welcome to COL Restaurant
             </span>
           </h2>
-          <p className="text-2xl text-gray-600 mb-12 leading-relaxed">
+          <p className={`text-2xl mb-12 leading-relaxed ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
             Experience culinary excellence with our delicious menu and seamless ordering system
           </p>
           <div className="flex justify-center space-x-4">
@@ -57,7 +69,11 @@ const Home = () => {
             </Link>
             <Link
               to="/login"
-              className="px-10 py-4 bg-white text-gray-800 rounded-full text-xl font-bold hover:bg-gray-50 transform hover:scale-105 transition-all duration-300 shadow-2xl border-2 border-gray-200 hover:border-orange-400 flex items-center space-x-2"
+              className={`px-10 py-4 rounded-full text-xl font-bold transform hover:scale-105 transition-all duration-300 shadow-2xl border-2 hover:border-orange-400 flex items-center space-x-2 ${
+                theme === 'dark'
+                  ? 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700'
+                  : 'bg-white text-gray-800 border-gray-200 hover:bg-gray-50'
+              }`}
             >
               <span>👤</span>
               <span>Login</span>
