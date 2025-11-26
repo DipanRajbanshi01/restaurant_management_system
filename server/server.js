@@ -7,6 +7,8 @@ const { Server } = require('socket.io');
 const initAdmin = require('./src/utils/initAdmin');
 const migrateFeedbackIndexes = require('./src/utils/migrateFeedbackIndexes');
 const migrateMenuTags = require('./src/utils/migrateMenuTags');
+const migrateUsers = require('./src/utils/migrateUsers');
+const migrateCarts = require('./src/utils/migrateCarts');
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +48,7 @@ app.use('/api/notifications', require('./src/routes/notifications'));
 app.use('/api/upload', require('./src/routes/upload'));
 app.use('/api/feedback', require('./src/routes/feedback'));
 app.use('/api/chatbot', require('./src/routes/chatbot'));
+app.use('/api/cart', require('./src/routes/cart'));
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
@@ -80,6 +83,12 @@ const connectDB = async () => {
     
     // Initialize admin user
     await initAdmin();
+    
+    // Migrate user model (add new fields for Google OAuth and password reset)
+    await migrateUsers();
+    
+    // Migrate carts (create cart documents for existing users)
+    await migrateCarts();
     
     // Migrate feedback indexes
     await migrateFeedbackIndexes();

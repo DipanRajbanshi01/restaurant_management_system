@@ -52,6 +52,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.login(email, password);
       if (response.success && response.data) {
+        // Clear any previous user's cart before setting new user
+        const previousUserId = user?.id;
+        if (previousUserId && previousUserId !== response.data.user.id) {
+          localStorage.removeItem(`restaurantCart_${previousUserId}`);
+        }
         setUser(response.data.user);
         setIsAuthenticated(true);
         localStorage.setItem('token', response.data.token);
@@ -67,6 +72,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.googleLogin(token);
       if (response.success && response.data) {
+        // Cart will be loaded automatically by Dashboard component based on user ID
+        // No need to clear previous user's cart - it's stored separately per user
         setUser(response.data.user);
         setIsAuthenticated(true);
         localStorage.setItem('token', response.data.token);
@@ -92,6 +99,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Don't clear cart on logout - keep it for when user logs back in
+    // Cart will be automatically loaded when user logs in again
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('token');

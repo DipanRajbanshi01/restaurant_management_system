@@ -124,11 +124,14 @@ const Login = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className={`block text-sm font-semibold mb-2 ${
-              theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-            }`}>
-              🔒 Password
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label htmlFor="password" className={`block text-sm font-semibold ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                🔒 Password
+              </label>
+              
+            </div>
             <input
               type="password"
               id="password"
@@ -143,7 +146,18 @@ const Login = () => {
               }`}
               placeholder="••••••••"
             />
+            <Link
+                to="/forgot-password"
+                className={`text-sm ${
+                  theme === 'dark' 
+                    ? 'text-orange-400 hover:text-orange-300' 
+                    : 'text-orange-600 hover:text-orange-700'
+                } font-semibold hover:underline`}
+              >
+                Forgot Password?
+              </Link>
           </div>
+          
 
           <button
             type="submit"

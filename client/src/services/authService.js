@@ -43,6 +43,16 @@ export const authService = {
     const response = await api.post('/auth/google/complete-profile', { name });
     return response.data;
   },
+
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (resetToken, password) => {
+    const response = await api.put(`/auth/reset-password/${resetToken}`, { password });
+    return response.data;
+  },
 };
 
 export default api;

@@ -7,6 +7,7 @@ import { orderService } from '../../services/orderService';
 import { notificationService } from '../../services/notificationService';
 import { feedbackService } from '../../services/feedbackService';
 import { userService } from '../../services/userService';
+import { cartService } from '../../services/cartService';
 import { toast } from 'react-toastify';
 import { ThemeContext } from '../../context/ThemeContext';
 import UserNavbar from '../../components/navbars/UserNavbar';
@@ -16,11 +17,7 @@ const UserDashboard = () => {
   const socket = useSocket();
   const location = useLocation();
   const [menuItems, setMenuItems] = useState([]);
-  const [cart, setCart] = useState(() => {
-    // Load cart from localStorage on initial render
-    const savedCart = localStorage.getItem('restaurantCart');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,10 +38,43 @@ const UserDashboard = () => {
   const [favorites, setFavorites] = useState([]);
   const [showFavorites, setShowFavorites] = useState(false);
 
-  // Save cart to localStorage whenever it changes
+  // Load cart from database when user is available
+  const fetchCart = async () => {
+    if (!user?.id) {
+      setCart([]);
+      setSelectedCartItems(new Set());
+      return;
+    }
+
+    try {
+      const response = await cartService.getCart();
+      if (response.success) {
+        // Convert database cart format to frontend format
+        const formattedCart = response.data.items.map((cartItem) => ({
+          item: cartItem.item,
+          quantity: cartItem.quantity,
+          price: cartItem.price,
+          specialInstructions: cartItem.specialInstructions || '',
+        }));
+        setCart(formattedCart);
+        setSelectedCartItems(new Set());
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      setCart([]);
+      setSelectedCartItems(new Set());
+    }
+  };
+
+  // Load cart when user changes
   useEffect(() => {
-    localStorage.setItem('restaurantCart', JSON.stringify(cart));
-  }, [cart]);
+    if (user?.id) {
+      fetchCart();
+    } else {
+      setCart([]);
+      setSelectedCartItems(new Set());
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     fetchMenuItems();
@@ -133,57 +163,53 @@ const UserDashboard = () => {
     setShowInstructionsModal(true);
   };
 
-  const addToCart = (item, instructions = '') => {
-    const existingItem = cart.find((cartItem) => cartItem.item._id === item._id && cartItem.specialInstructions === instructions);
-    if (existingItem) {
-      setCart(
-        cart.map((cartItem) =>
-          cartItem.item._id === item._id && cartItem.specialInstructions === instructions
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        )
-      );
-    } else {
-      setCart([...cart, { item, quantity: 1, price: item.price, specialInstructions: instructions }]);
+  const addToCart = async (item, instructions = '') => {
+    try {
+      await cartService.addToCart(item._id, 1, instructions);
+      toast.success('Item added to cart');
+      setShowInstructionsModal(false);
+      setSelectedItem(null);
+      setSpecialInstructions('');
+      // Refresh cart from database
+      await fetchCart();
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add item to cart');
     }
-    toast.success('Item added to cart');
-    setShowInstructionsModal(false);
-    setSelectedItem(null);
-    setSpecialInstructions('');
   };
 
-  const removeFromCart = (itemId) => {
-    const newCart = cart.filter((cartItem) => cartItem.item._id !== itemId);
-    setCart(newCart);
-    // Clear selections since indices will change
-    setSelectedCartItems(new Set());
+  const removeFromCart = async (itemId, specialInstructions = '') => {
+    try {
+      await cartService.removeFromCart(itemId, specialInstructions);
+      toast.success('Item removed from cart');
+      // Refresh cart from database
+      await fetchCart();
+      setSelectedCartItems(new Set());
+    } catch (error) {
+      console.error('Error removing from cart:', error);
+      toast.error('Failed to remove item from cart');
+    }
   };
 
-  const updateQuantity = (idx, quantity) => {
-    if (quantity <= 0) {
-      const updatedCart = [...cart];
-      updatedCart.splice(idx, 1);
-      setCart(updatedCart);
-      // Remove the index from selected items if it was selected
-      const newSelected = new Set(selectedCartItems);
-      newSelected.delete(idx);
-      // Adjust indices for items after the removed one
-      const adjustedSelected = new Set();
-      newSelected.forEach(selectedIdx => {
-        if (selectedIdx < idx) {
-          adjustedSelected.add(selectedIdx);
-        } else if (selectedIdx > idx) {
-          adjustedSelected.add(selectedIdx - 1);
-        }
-      });
-      setSelectedCartItems(adjustedSelected);
-      return;
+  const updateQuantity = async (idx, quantity) => {
+    const cartItem = cart[idx];
+    if (!cartItem) return;
+
+    try {
+      if (quantity <= 0) {
+        await cartService.removeFromCart(cartItem.item._id, cartItem.specialInstructions);
+        toast.success('Item removed from cart');
+      } else {
+        await cartService.updateItemQuantity(cartItem.item._id, quantity, cartItem.specialInstructions);
+      }
+      // Refresh cart from database
+      await fetchCart();
+      // Clear selections since cart structure may have changed
+      setSelectedCartItems(new Set());
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      toast.error('Failed to update quantity');
     }
-    setCart(
-      cart.map((cartItem, index) =>
-        index === idx ? { ...cartItem, quantity } : cartItem
-      )
-    );
   };
 
   const getTotalPrice = () => {
@@ -273,11 +299,16 @@ const UserDashboard = () => {
       const response = await orderService.createOrder(orderData);
       if (response.success) {
         toast.success('Order placed successfully!');
-        // Remove only selected items from cart
+        // Remove only selected items from cart in database
         const remainingCart = cart.filter((_, idx) => !selectedCartItems.has(idx));
-        setCart(remainingCart);
-        localStorage.setItem('restaurantCart', JSON.stringify(remainingCart));
+        await cartService.updateCart(remainingCart.map(cartItem => ({
+          item: cartItem.item._id,
+          quantity: cartItem.quantity,
+          price: cartItem.price,
+          specialInstructions: cartItem.specialInstructions || '',
+        })));
         setSelectedCartItems(new Set());
+        await fetchCart(); // Refresh cart from database
         fetchOrders();
       }
     } catch (error) {
@@ -845,24 +876,7 @@ const UserDashboard = () => {
                               +
                             </button>
                             <button
-                              onClick={() => {
-                                const updatedCart = [...cart];
-                                updatedCart.splice(idx, 1);
-                                setCart(updatedCart);
-                                // Remove the index from selected items if it was selected
-                                const newSelected = new Set(selectedCartItems);
-                                newSelected.delete(idx);
-                                // Adjust indices for items after the removed one
-                                const adjustedSelected = new Set();
-                                newSelected.forEach(selectedIdx => {
-                                  if (selectedIdx < idx) {
-                                    adjustedSelected.add(selectedIdx);
-                                  } else if (selectedIdx > idx) {
-                                    adjustedSelected.add(selectedIdx - 1);
-                                  }
-                                });
-                                setSelectedCartItems(adjustedSelected);
-                              }}
+                              onClick={() => removeFromCart(cartItem.item._id, cartItem.specialInstructions)}
                               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                             >
                               🗑️
