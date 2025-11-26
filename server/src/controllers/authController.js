@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const { OAuth2Client } = require('google-auth-library');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
@@ -183,8 +184,139 @@ const verifyToken = async (req, res) => {
   }
 };
 
+// @desc    Google OAuth login/register
+// @route   POST /api/auth/google
+// @access  Public
+const googleAuth = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google token is required',
+      });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    // Verify the token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Check if user exists with this Google ID
+    let user = await User.findOne({ googleId });
+
+    if (!user) {
+      // Check if user exists with this email
+      user = await User.findOne({ email: email.toLowerCase().trim() });
+      
+      if (user) {
+        // Link Google account to existing user
+        user.googleId = googleId;
+        user.isGoogleUser = true;
+        await user.save();
+      } else {
+        // Create new user
+        user = await User.create({
+          name: name || 'User',
+          email: email.toLowerCase().trim(),
+          googleId,
+          isGoogleUser: true,
+          role: 'user',
+        });
+      }
+    }
+
+    // Check if user needs to set username (first time Google login)
+    const needsUsername = !user.name || user.name === 'User';
+
+    // Generate token
+    const jwtToken = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: needsUsername ? 'Please set your username' : 'Login successful',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          needsUsername,
+        },
+        token: jwtToken,
+      },
+    });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Google authentication failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
+// @desc    Complete Google user profile (set username)
+// @route   POST /api/auth/google/complete-profile
+// @access  Private
+const completeGoogleProfile = async (req, res) => {
+  try {
+    const { name } = req.body;
+    const userId = req.user.id;
+
+    if (!name || name.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name must be at least 2 characters long',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    user.name = name.trim();
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile completed successfully',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Complete profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to complete profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error',
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   verifyToken,
+  googleAuth,
+  completeGoogleProfile,
 };

@@ -63,6 +63,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (token) => {
+    try {
+      const response = await authService.googleLogin(token);
+      if (response.success && response.data) {
+        setUser(response.data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('token', response.data.token);
+        return response;
+      }
+      throw new Error(response.message || 'Google login failed');
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const completeGoogleProfile = async (name) => {
+    try {
+      const response = await authService.completeGoogleProfile(name);
+      if (response.success && response.data) {
+        setUser(response.data.user);
+        return response;
+      }
+      throw new Error(response.message || 'Failed to complete profile');
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
@@ -82,6 +110,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     register,
     login,
+    googleLogin,
+    completeGoogleProfile,
     logout,
     updateUserContext,
   };

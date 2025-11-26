@@ -33,6 +33,16 @@ export const authService = {
     const response = await api.get('/auth/verify');
     return response.data;
   },
+
+  googleLogin: async (token) => {
+    const response = await api.post('/auth/google', { token });
+    return response.data;
+  },
+
+  completeGoogleProfile: async (name) => {
+    const response = await api.post('/auth/google/complete-profile', { name });
+    return response.data;
+  },
 };
 
 export default api;

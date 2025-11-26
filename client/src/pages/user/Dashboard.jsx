@@ -36,6 +36,7 @@ const UserDashboard = () => {
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [hoveredFeedbackRating, setHoveredFeedbackRating] = useState(0);
+  const [selectedCartItems, setSelectedCartItems] = useState(new Set());
   const [ratingStats, setRatingStats] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -152,7 +153,10 @@ const UserDashboard = () => {
   };
 
   const removeFromCart = (itemId) => {
-    setCart(cart.filter((cartItem) => cartItem.item._id !== itemId));
+    const newCart = cart.filter((cartItem) => cartItem.item._id !== itemId);
+    setCart(newCart);
+    // Clear selections since indices will change
+    setSelectedCartItems(new Set());
   };
 
   const updateQuantity = (idx, quantity) => {
@@ -160,6 +164,19 @@ const UserDashboard = () => {
       const updatedCart = [...cart];
       updatedCart.splice(idx, 1);
       setCart(updatedCart);
+      // Remove the index from selected items if it was selected
+      const newSelected = new Set(selectedCartItems);
+      newSelected.delete(idx);
+      // Adjust indices for items after the removed one
+      const adjustedSelected = new Set();
+      newSelected.forEach(selectedIdx => {
+        if (selectedIdx < idx) {
+          adjustedSelected.add(selectedIdx);
+        } else if (selectedIdx > idx) {
+          adjustedSelected.add(selectedIdx - 1);
+        }
+      });
+      setSelectedCartItems(adjustedSelected);
       return;
     }
     setCart(
@@ -170,7 +187,30 @@ const UserDashboard = () => {
   };
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    return cart.reduce((total, item, idx) => {
+      if (selectedCartItems.has(idx)) {
+        return total + item.price * item.quantity;
+      }
+      return total;
+    }, 0);
+  };
+
+  const toggleCartItemSelection = (idx) => {
+    const newSelected = new Set(selectedCartItems);
+    if (newSelected.has(idx)) {
+      newSelected.delete(idx);
+    } else {
+      newSelected.add(idx);
+    }
+    setSelectedCartItems(newSelected);
+  };
+
+  const selectAllCartItems = () => {
+    if (selectedCartItems.size === cart.length) {
+      setSelectedCartItems(new Set());
+    } else {
+      setSelectedCartItems(new Set(cart.map((_, idx) => idx)));
+    }
   };
 
   const openFeedbackModal = (item) => {
@@ -212,9 +252,15 @@ const UserDashboard = () => {
       return;
     }
 
+    if (selectedCartItems.size === 0) {
+      toast.error('Please select at least one item to place order');
+      return;
+    }
+
     try {
+      const selectedItems = Array.from(selectedCartItems).map(idx => cart[idx]);
       const orderData = {
-        items: cart.map((cartItem) => ({
+        items: selectedItems.map((cartItem) => ({
           item: cartItem.item._id,
           quantity: cartItem.quantity,
           price: cartItem.price,
@@ -227,9 +273,11 @@ const UserDashboard = () => {
       const response = await orderService.createOrder(orderData);
       if (response.success) {
         toast.success('Order placed successfully!');
-        setCart([]);
-        localStorage.removeItem('restaurantCart'); // Clear cart from localStorage
-        setShowCart(false);
+        // Remove only selected items from cart
+        const remainingCart = cart.filter((_, idx) => !selectedCartItems.has(idx));
+        setCart(remainingCart);
+        localStorage.setItem('restaurantCart', JSON.stringify(remainingCart));
+        setSelectedCartItems(new Set());
         fetchOrders();
       }
     } catch (error) {
@@ -706,6 +754,25 @@ const UserDashboard = () => {
                   <p className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Cart is empty</p>
                 ) : (
                   <>
+                    <div className="mb-3 flex items-center justify-between">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedCartItems.size === cart.length && cart.length > 0}
+                          onChange={selectAllCartItems}
+                          className={`w-4 h-4 rounded ${
+                            theme === 'dark' 
+                              ? 'bg-gray-700 border-gray-600 text-orange-500' 
+                              : 'border-gray-300 text-orange-500'
+                          } focus:ring-orange-500`}
+                        />
+                        <span className={`ml-2 text-sm font-medium ${
+                          theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                        }`}>
+                          Select All ({selectedCartItems.size}/{cart.length})
+                        </span>
+                      </label>
+                    </div>
                     <div className="space-y-4 mb-4">
                       {cart.map((cartItem, idx) => (
                         <div
@@ -715,10 +782,21 @@ const UserDashboard = () => {
                           }`}
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <p className={`font-semibold ${
-                                theme === 'dark' ? 'text-gray-100' : ''
-                              }`}>{cartItem.item.name}</p>
+                            <div className="flex items-start space-x-2 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={selectedCartItems.has(idx)}
+                                onChange={() => toggleCartItemSelection(idx)}
+                                className={`mt-1 w-4 h-4 rounded ${
+                                  theme === 'dark' 
+                                    ? 'bg-gray-700 border-gray-600 text-orange-500' 
+                                    : 'border-gray-300 text-orange-500'
+                                } focus:ring-orange-500`}
+                              />
+                              <div className="flex-1">
+                                <p className={`font-semibold ${
+                                  theme === 'dark' ? 'text-gray-100' : ''
+                                }`}>{cartItem.item.name}</p>
                               <p className={`text-sm ${
                                 theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
                               }`}>
@@ -738,6 +816,7 @@ const UserDashboard = () => {
                                   }`}>{cartItem.specialInstructions}</p>
                                 </div>
                               )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
@@ -770,6 +849,19 @@ const UserDashboard = () => {
                                 const updatedCart = [...cart];
                                 updatedCart.splice(idx, 1);
                                 setCart(updatedCart);
+                                // Remove the index from selected items if it was selected
+                                const newSelected = new Set(selectedCartItems);
+                                newSelected.delete(idx);
+                                // Adjust indices for items after the removed one
+                                const adjustedSelected = new Set();
+                                newSelected.forEach(selectedIdx => {
+                                  if (selectedIdx < idx) {
+                                    adjustedSelected.add(selectedIdx);
+                                  } else if (selectedIdx > idx) {
+                                    adjustedSelected.add(selectedIdx - 1);
+                                  }
+                                });
+                                setSelectedCartItems(adjustedSelected);
                               }}
                               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                             >
@@ -805,13 +897,25 @@ const UserDashboard = () => {
                         theme === 'dark' ? 'text-gray-100' : ''
                       }`}>
                         Total: Rs. {getTotalPrice().toFixed(2)}
+                        {selectedCartItems.size > 0 && (
+                          <span className={`text-sm font-normal ml-2 ${
+                            theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                          }`}>
+                            ({selectedCartItems.size} item{selectedCartItems.size !== 1 ? 's' : ''} selected)
+                          </span>
+                        )}
                       </p>
                     </div>
                     <button
                       onClick={handlePlaceOrder}
-                      className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-2xl font-bold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                      disabled={selectedCartItems.size === 0}
+                      className={`w-full py-3 rounded-2xl font-bold transform transition-all duration-300 shadow-lg hover:shadow-xl ${
+                        selectedCartItems.size === 0
+                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 hover:scale-105'
+                      }`}
                     >
-                      🎉 Place Order
+                      🎉 Place Order ({selectedCartItems.size > 0 ? selectedCartItems.size : 0} item{selectedCartItems.size !== 1 ? 's' : ''})
                     </button>
                   </>
                 )}

@@ -43,7 +43,13 @@ const UserOrders = () => {
   const completeOrder = async (orderId) => {
     try {
       await orderService.updateOrderStatus(orderId, 'completed');
-      toast.success('Order completed and moved to history!');
+      // Find the order to check payment status
+      const order = orders.find(o => o._id === orderId);
+      if (order && order.paymentStatus === 'paid') {
+        toast.success('Order completed and moved to history!');
+      } else {
+        toast.success('Order completed! Please complete payment to move it to history.');
+      }
       fetchOrders();
     } catch (error) {
       console.error('Error completing order:', error);
@@ -133,11 +139,21 @@ const UserOrders = () => {
   }, [orders]);
 
   // Separate ongoing and history orders
+  // Ongoing: orders that are pending/cooking/ready OR completed but unpaid
   const ongoingOrders = orders.filter(
-    (order) => ['pending', 'cooking', 'ready'].includes(order.status)
+    (order) => {
+      const isActiveStatus = ['pending', 'cooking', 'ready'].includes(order.status);
+      const isCompletedButUnpaid = order.status === 'completed' && order.paymentStatus !== 'paid' && order.paymentStatus !== 'cancelled';
+      return isActiveStatus || isCompletedButUnpaid;
+    }
   );
+  // History: orders that are completed AND paid, or cancelled
   const historyOrders = orders.filter(
-    (order) => ['completed', 'cancelled'].includes(order.status)
+    (order) => {
+      const isCompletedAndPaid = order.status === 'completed' && order.paymentStatus === 'paid';
+      const isCancelled = order.status === 'cancelled';
+      return isCompletedAndPaid || isCancelled;
+    }
   );
 
   // Filter orders based on search and status

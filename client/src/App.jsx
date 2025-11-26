@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -36,11 +37,14 @@ import ChefFeedback from './pages/chef/Feedback';
 import AdminMenu from './pages/admin/Menu';
 
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <SocketProvider>
-          <Router future={{ v7_relativeSplatPath: true }}>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <AuthProvider>
+        <ThemeProvider>
+          <SocketProvider>
+            <Router future={{ v7_relativeSplatPath: true }}>
             <div className="App">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -160,6 +164,7 @@ function App() {
         </SocketProvider>
       </ThemeProvider>
     </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
 

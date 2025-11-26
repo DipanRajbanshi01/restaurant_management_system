@@ -13,8 +13,6 @@ const AdminDashboard = () => {
   const { theme } = useContext(ThemeContext);
   const location = useLocation();
   const [stats, setStats] = useState(null);
-  const [showChefForm, setShowChefForm] = useState(false);
-  const [chefData, setChefData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,20 +30,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCreateChef = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await adminService.createChef(chefData);
-      if (response.success) {
-        toast.success('Chef account created successfully!');
-        setChefData({ name: '', email: '', password: '' });
-        setShowChefForm(false);
-        fetchStats();
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create chef account');
-    }
-  };
 
   return (
     <div className={`min-h-screen ${
@@ -248,83 +232,6 @@ const AdminDashboard = () => {
             </div>
           </>
         )}
-
-        {/* Create Chef Section */}
-        <div className={`rounded-lg shadow-md p-6 mb-8 ${
-          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-        }`}>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className={`text-2xl font-bold ${
-              theme === 'dark' ? 'text-gray-100' : ''
-            }`}>Create Chef Account</h2>
-            <button
-              onClick={() => setShowChefForm(!showChefForm)}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
-            >
-              {showChefForm ? 'Cancel' : 'Create Chef'}
-            </button>
-          </div>
-
-          {showChefForm && (
-            <form onSubmit={handleCreateChef} className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  theme === 'dark' ? 'text-gray-200' : ''
-                }`}>Name</label>
-                <input
-                  type="text"
-                  value={chefData.name}
-                  onChange={(e) => setChefData({ ...chefData, name: e.target.value })}
-                  required
-                  className={`w-full px-4 py-2 border rounded-lg ${
-                    theme === 'dark' 
-                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
-                      : ''
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  theme === 'dark' ? 'text-gray-200' : ''
-                }`}>Email</label>
-                <input
-                  type="email"
-                  value={chefData.email}
-                  onChange={(e) => setChefData({ ...chefData, email: e.target.value })}
-                  required
-                  className={`w-full px-4 py-2 border rounded-lg ${
-                    theme === 'dark' 
-                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
-                      : ''
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${
-                  theme === 'dark' ? 'text-gray-200' : ''
-                }`}>Password</label>
-                <input
-                  type="password"
-                  value={chefData.password}
-                  onChange={(e) => setChefData({ ...chefData, password: e.target.value })}
-                  required
-                  minLength={6}
-                  className={`w-full px-4 py-2 border rounded-lg ${
-                    theme === 'dark' 
-                      ? 'bg-gray-700 border-gray-600 text-gray-100' 
-                      : ''
-                  }`}
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600"
-              >
-                Create Chef Account
-              </button>
-            </form>
-          )}
-        </div>
 
         {/* Quick Links */}
         <div className="grid md:grid-cols-3 gap-6">

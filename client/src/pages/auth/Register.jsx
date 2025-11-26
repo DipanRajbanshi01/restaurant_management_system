@@ -1,8 +1,10 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import { toast } from 'react-toastify';
+import UsernameSetupModal from '../../components/common/UsernameSetupModal';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -12,9 +14,35 @@ const Register = () => {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
-  const { register } = useContext(AuthContext);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const { register, googleLogin } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
   const navigate = useNavigate();
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      const response = await googleLogin(credentialResponse.credential);
+      if (response && response.success) {
+        if (response.data.user.needsUsername) {
+          setShowUsernameModal(true);
+        } else {
+          toast.success('Registration successful!');
+          const userRole = response.data?.user?.role || 'user';
+          navigate(`/${userRole}/dashboard`);
+        }
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Google registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    toast.error('Google registration failed');
+    setLoading(false);
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -179,7 +207,41 @@ const Register = () => {
             {loading ? '⏳ Creating Account...' : '🚀 Register'}
           </button>
 
-          <p className="text-center text-gray-600 pt-4 border-t border-gray-200">
+          <div className="relative my-6">
+            <div className={`absolute inset-0 flex items-center ${
+              theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+            }`}>
+              <div className={`w-full border-t ${
+                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+              }`}></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className={`px-4 ${
+                theme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-500'
+              }`}>
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              useOneTap
+              theme={theme === 'dark' ? 'filled_black' : 'outline'}
+              size="large"
+              text="signup_with"
+              shape="rectangular"
+              logo_alignment="left"
+            />
+          </div>
+
+          <p className={`text-center pt-4 border-t ${
+            theme === 'dark' 
+              ? 'text-gray-300 border-gray-700' 
+              : 'text-gray-600 border-gray-200'
+          }`}>
             Already have an account?{' '}
             <Link to="/login" className="text-orange-600 font-semibold hover:text-orange-700 hover:underline">
               Login here 🔐
@@ -187,6 +249,10 @@ const Register = () => {
           </p>
         </form>
       </div>
+      <UsernameSetupModal 
+        isOpen={showUsernameModal} 
+        onClose={() => setShowUsernameModal(false)} 
+      />
     </div>
   );
 };
