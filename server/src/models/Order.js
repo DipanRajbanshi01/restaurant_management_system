@@ -44,7 +44,15 @@ const orderSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'card', 'online'],
+    enum: ['cash', 'card', 'online', 'esewa', 'khalti'],
+  },
+  esewaTransactionId: {
+    type: String,
+    default: null,
+  },
+  khaltiPidx: {
+    type: String,
+    default: null,
   },
   chef: {
     type: mongoose.Schema.Types.ObjectId,
@@ -73,6 +81,13 @@ orderSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Indexes for better query performance
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ paymentStatus: 1 });
+orderSchema.index({ status: 1 });
+orderSchema.index({ esewaTransactionId: 1 }); // For eSewa payment verification
+orderSchema.index({ khaltiPidx: 1 }); // For Khalti payment verification
 
 module.exports = mongoose.model('Order', orderSchema);
 

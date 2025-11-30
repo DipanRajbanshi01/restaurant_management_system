@@ -12,6 +12,8 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import FAQ from './pages/FAQ';
 import Terms from './pages/Terms';
+import PaymentSuccess from './pages/payment/PaymentSuccess';
+import PaymentFailure from './pages/payment/PaymentFailure';
 import UserDashboard from './pages/user/Dashboard';
 import UserOrders from './pages/user/Orders';
 import UserFeedback from './pages/user/Feedback';
@@ -21,6 +23,7 @@ import AdminOrders from './pages/admin/Orders';
 import AdminUsers from './pages/admin/Users';
 import AdminFeedback from './pages/admin/Feedback';
 import AdminChatLogs from './pages/admin/ChatLogs';
+import AdminSupportChat from './pages/admin/SupportChat';
 
 // Context
 import { AuthProvider } from './context/AuthContext';
@@ -40,9 +43,18 @@ import AdminMenu from './pages/admin/Menu';
 
 function App() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  
+  // Debug: Log client ID and origin (for troubleshooting)
+  if (process.env.NODE_ENV === 'development') {
+    if (!googleClientId) {
+      console.warn('⚠️ VITE_GOOGLE_CLIENT_ID is not set in environment variables');
+    } else {
+      console.log('✅ Google OAuth Client ID loaded:', googleClientId.substring(0, 20) + '...');
+      console.log('📍 Current origin:', window.location.origin);
+    }
+  }
 
-  return (
-    <GoogleOAuthProvider clientId={googleClientId}>
+  const appContent = (
       <AuthProvider>
         <ThemeProvider>
           <SocketProvider>
@@ -56,6 +68,8 @@ function App() {
             <Route path="/reset-password/:resetToken" element={<ResetPassword />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+            <Route path="/payment/failure" element={<PaymentFailure />} />
             
             {/* User Routes */}
             <Route
@@ -158,16 +172,46 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/support-chat"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminSupportChat />
+                </ProtectedRoute>
+              }
+            />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
             <Chatbot />
-            <ToastContainer position="top-right" autoClose={3000} />
+            <ToastContainer 
+              position="top-right" 
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              pauseOnHover
+              theme="light"
+              enableMultiContainer={false}
+            />
             </div>
           </Router>
         </SocketProvider>
       </ThemeProvider>
     </AuthProvider>
+  );
+
+  // Wrap with GoogleOAuthProvider only if client ID exists
+  if (!googleClientId) {
+    console.error('❌ Google OAuth Client ID is missing. Google login will not work.');
+    return appContent;
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={googleClientId}>
+      {appContent}
     </GoogleOAuthProvider>
   );
 }

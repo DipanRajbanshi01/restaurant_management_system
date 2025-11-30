@@ -39,8 +39,16 @@ const Register = () => {
     }
   };
 
-  const handleGoogleError = () => {
-    toast.error('Google registration failed');
+  const handleGoogleError = (error) => {
+    console.error('Google registration error:', error);
+    // More specific error messages
+    if (error?.error === 'popup_closed_by_user') {
+      toast.info('Registration cancelled');
+    } else if (error?.error === 'access_denied') {
+      toast.error('Access denied. Please try again.');
+    } else {
+      toast.error('Google registration failed. Please check your browser settings or try again.');
+    }
     setLoading(false);
   };
 
@@ -228,7 +236,6 @@ const Register = () => {
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              useOneTap
               theme={theme === 'dark' ? 'filled_black' : 'outline'}
               size="large"
               text="signup_with"

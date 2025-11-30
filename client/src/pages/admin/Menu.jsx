@@ -213,8 +213,8 @@ const AdminMenu = () => {
               }
             }}
           >
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
-              <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-4 rounded-t-3xl flex items-center justify-between">
+            <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-scale-in`}>
+              <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-4 rounded-t-3xl flex items-center justify-between flex-shrink-0">
                 <h3 className="text-2xl font-bold">
                   {editingItem ? '✏️ Edit Menu Item' : '➕ Add Menu Item'}
                 </h3>
@@ -229,25 +229,33 @@ const AdminMenu = () => {
                   ✕
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">Name *</label>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:border-orange-500 focus:outline-none transition-colors ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'border-gray-200'
+                    }`}
                     placeholder="e.g., Chicken Biryani"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">Category *</label>
+                  <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Category *</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 border-2 rounded-xl focus:border-orange-500 focus:outline-none transition-colors ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100' 
+                        : 'border-gray-200'
+                    }`}
                     required
                   >
                     <option value="Food">🍽️ Food</option>
@@ -259,22 +267,34 @@ const AdminMenu = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">Description</label>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors resize-none"
+                  className={`w-full px-4 py-3 border-2 rounded-xl focus:border-orange-500 focus:outline-none transition-colors resize-none ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                      : 'border-gray-200'
+                  }`}
                   rows="3"
                   placeholder="Describe the dish..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                   🏷️ Tags for Chatbot Recommendations
                 </label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 p-4 border-2 border-gray-200 rounded-xl bg-gradient-to-br from-gray-50 to-white">
+                <div className={`grid grid-cols-3 sm:grid-cols-5 gap-2 p-4 border-2 rounded-xl ${
+                  theme === 'dark' 
+                    ? 'border-gray-600 bg-gray-700/50' 
+                    : 'border-gray-200 bg-gradient-to-br from-gray-50 to-white'
+                }`}>
                   {['Spicy', 'Sweet', 'Healthy', 'Veg', 'Non-Veg', 'Beverages', 'Light', 'Heavy', 'Starter', 'Main Course'].map((tag) => (
-                    <label key={tag} className="flex items-center space-x-2 cursor-pointer hover:bg-orange-50 p-2 rounded-lg transition-all group">
+                    <label key={tag} className={`flex items-center space-x-2 cursor-pointer p-2 rounded-lg transition-all group ${
+                      theme === 'dark' 
+                        ? 'hover:bg-orange-900/30' 
+                        : 'hover:bg-orange-50'
+                    }`}>
                       <input
                         type="checkbox"
                         checked={formData.tags?.includes(tag)}
@@ -286,32 +306,44 @@ const AdminMenu = () => {
                         }}
                         className="w-4 h-4 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
                       />
-                      <span className="text-xs font-medium group-hover:text-orange-600 transition-colors">{tag}</span>
+                      <span className={`text-xs font-medium transition-colors ${
+                        theme === 'dark' 
+                          ? 'text-gray-200 group-hover:text-orange-400' 
+                          : 'group-hover:text-orange-600'
+                      }`}>{tag}</span>
                     </label>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                <p className={`text-xs mt-2 flex items-center ${
+                  theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                }`}>
                   <span className="mr-1">💡</span>
                   <span>Help chatbot recommend this item better (select all that apply)</span>
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">Price (Rs.) *</label>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>Price (Rs.) *</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3.5 text-gray-500 font-semibold">Rs.</span>
+                  <span className={`absolute left-4 top-3.5 font-semibold ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>Rs.</span>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
-                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors text-lg font-semibold"
+                    className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl focus:border-orange-500 focus:outline-none transition-colors text-lg font-semibold ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' 
+                        : 'border-gray-200'
+                    }`}
                     placeholder="0.00"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-2 text-gray-700">📷 Image</label>
+                <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>📷 Image</label>
                 
                 {/* Drag and Drop Area */}
                 <div
@@ -438,8 +470,8 @@ const AdminMenu = () => {
                   Unchecked items won't appear in the menu
                 </p>
               </div>
-              <div className={`flex space-x-3 pt-4 border-t ${
-                theme === 'dark' ? 'border-gray-700' : ''
+              <div className={`flex space-x-3 pt-4 border-t flex-shrink-0 ${
+                theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
               }`}>
                 <button
                   type="submit"
@@ -509,12 +541,12 @@ const AdminMenu = () => {
                   : 'bg-gradient-to-br from-white to-gray-50 border-gray-100'
               }`}>
                 {/* Status & Category Badges */}
-                <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                  <span className="inline-block px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 min-h-[60px]">
+                  <span className="inline-block px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-semibold rounded-full shadow-lg whitespace-nowrap">
                     {item.category || 'Others'}
                   </span>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold shadow-lg ${
+                    className={`px-3 py-1 rounded-full text-xs font-semibold shadow-lg whitespace-nowrap ${
                       item.available
                         ? 'bg-gradient-to-r from-green-400 to-green-600 text-white'
                         : 'bg-gradient-to-r from-red-400 to-red-600 text-white'
@@ -551,7 +583,7 @@ const AdminMenu = () => {
                 </div>
 
                 {/* Content Section */}
-                <div className="p-5 relative">
+                <div className="p-5 relative flex flex-col min-h-[200px]">
                   {/* Decorative Icon */}
                   <div className={`absolute -top-8 left-5 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-500 ${
                     theme === 'dark' ? 'bg-gray-700' : 'bg-white'
@@ -564,7 +596,7 @@ const AdminMenu = () => {
                     </span>
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-3 flex-1 flex flex-col">
                     <h3 className={`text-xl font-bold mb-2 group-hover:text-orange-600 transition-colors ${
                       theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
                     }`}>
@@ -603,18 +635,18 @@ const AdminMenu = () => {
                       </span>
                     </div>
 
-                    <div className={`flex space-x-2 pt-3 border-t ${
+                    <div className={`flex space-x-2 pt-3 mt-4 border-t ${
                       theme === 'dark' ? 'border-gray-700' : 'border-gray-100'
                     }`}>
                       <button
                         onClick={() => handleEdit(item)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+                        className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg text-sm"
                       >
                         ✏️ Edit
                       </button>
                       <button
                         onClick={() => handleDelete(item._id)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg"
+                        className="flex-1 px-4 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg text-sm"
                       >
                         🗑️ Delete
                       </button>

@@ -8,6 +8,8 @@ import { notificationService } from '../../services/notificationService';
 import { feedbackService } from '../../services/feedbackService';
 import { userService } from '../../services/userService';
 import { cartService } from '../../services/cartService';
+import { esewaService, submitEsewaPayment } from '../../services/esewaService';
+import { khaltiService } from '../../services/khaltiService';
 import { toast } from 'react-toastify';
 import { ThemeContext } from '../../context/ThemeContext';
 import UserNavbar from '../../components/navbars/UserNavbar';
@@ -298,6 +300,49 @@ const UserDashboard = () => {
 
       const response = await orderService.createOrder(orderData);
       if (response.success) {
+        const orderId = response.data._id;
+
+        // If payment method is eSewa, initiate eSewa payment
+        if (paymentMethod === 'esewa') {
+          try {
+            const esewaResponse = await esewaService.initiatePayment(orderId);
+            if (esewaResponse.success) {
+              // Submit form to eSewa
+              submitEsewaPayment(esewaResponse.data.paymentUrl, esewaResponse.data.paymentData);
+              // Don't clear cart yet - wait for payment confirmation
+              return;
+            } else {
+              toast.error('Failed to initiate eSewa payment');
+              return;
+            }
+          } catch (error) {
+            console.error('eSewa payment initiation error:', error);
+            toast.error('Failed to initiate eSewa payment');
+            return;
+          }
+        }
+
+        // If payment method is Khalti, initiate Khalti payment
+        if (paymentMethod === 'khalti') {
+          try {
+            const khaltiResponse = await khaltiService.initiatePayment(orderId);
+            if (khaltiResponse.success) {
+              // Redirect to Khalti payment page
+              window.location.href = khaltiResponse.data.paymentUrl;
+              // Don't clear cart yet - wait for payment confirmation
+              return;
+            } else {
+              toast.error('Failed to initiate Khalti payment');
+              return;
+            }
+          } catch (error) {
+            console.error('Khalti payment initiation error:', error);
+            toast.error('Failed to initiate Khalti payment');
+            return;
+          }
+        }
+
+        // For other payment methods (cash, card), proceed normally
         toast.success('Order placed successfully!');
         // Remove only selected items from cart in database
         const remainingCart = cart.filter((_, idx) => !selectedCartItems.has(idx));
@@ -904,6 +949,8 @@ const UserDashboard = () => {
                         <option value="card">Card</option>
                         <option value="cash">Cash</option>
                         <option value="online">Online</option>
+                        <option value="esewa">eSewa</option>
+                        <option value="khalti">Khalti</option>
                       </select>
                     </div>
                     <div className="mb-4">

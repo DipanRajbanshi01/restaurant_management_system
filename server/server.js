@@ -9,6 +9,8 @@ const migrateFeedbackIndexes = require('./src/utils/migrateFeedbackIndexes');
 const migrateMenuTags = require('./src/utils/migrateMenuTags');
 const migrateUsers = require('./src/utils/migrateUsers');
 const migrateCarts = require('./src/utils/migrateCarts');
+const migrateOrders = require('./src/utils/migrateOrders');
+const migrateSupportChat = require('./src/utils/migrateSupportChat');
 
 // Load environment variables
 dotenv.config();
@@ -27,7 +29,9 @@ const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
+    credentials: true,
   },
+  transports: ['websocket', 'polling'], // Allow both transports
 });
 
 // Make io available to routes
@@ -49,6 +53,9 @@ app.use('/api/upload', require('./src/routes/upload'));
 app.use('/api/feedback', require('./src/routes/feedback'));
 app.use('/api/chatbot', require('./src/routes/chatbot'));
 app.use('/api/cart', require('./src/routes/cart'));
+app.use('/api/esewa', require('./src/routes/esewa'));
+app.use('/api/khalti', require('./src/routes/khalti'));
+app.use('/api/support', require('./src/routes/support'));
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
@@ -65,6 +72,12 @@ io.on('connection', (socket) => {
   socket.on('join-room', (userId) => {
     socket.join(`user-${userId}`);
     console.log(`User ${userId} joined their room`);
+  });
+
+  socket.on('join-admin-room', (adminId) => {
+    socket.join(`admin-${adminId}`);
+    socket.join('admins'); // All admins room
+    console.log(`Admin ${adminId} joined admin room`);
   });
 
   socket.on('disconnect', () => {
@@ -90,11 +103,25 @@ const connectDB = async () => {
     // Migrate carts (create cart documents for existing users)
     await migrateCarts();
     
-    // Migrate feedback indexes
-    await migrateFeedbackIndexes();
+    // Migrate orders (add eSewa fields and indexes)
+    await migrateOrders();
+    
+    // Migrate feedback indexes (non-blocking - continues even if fails)
+    try {
+      await migrateFeedbackIndexes();
+    } catch (error) {
+      console.error('⚠️ Feedback migration warning (non-critical):', error.message);
+    }
     
     // Migrate menu tags
     await migrateMenuTags();
+    
+    // Migrate support chat (create indexes) - non-blocking
+    try {
+      await migrateSupportChat();
+    } catch (error) {
+      console.error('⚠️ SupportChat migration warning (non-critical):', error.message);
+    }
   } catch (error) {
     console.error('Error connecting to MongoDB:', error.message);
     process.exit(1);

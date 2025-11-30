@@ -10,8 +10,12 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-        transports: ['websocket'],
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const newSocket = io(apiUrl, {
+        transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
       });
 
       newSocket.on('connect', () => {
@@ -19,10 +23,20 @@ export const SocketProvider = ({ children }) => {
         newSocket.emit('join-room', user.id);
       });
 
+      newSocket.on('connect_error', (error) => {
+        console.warn('Socket connection error:', error.message);
+      });
+
+      newSocket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+      });
+
       setSocket(newSocket);
 
       return () => {
-        newSocket.close();
+        if (newSocket.connected) {
+          newSocket.close();
+        }
       };
     } else {
       if (socket) {

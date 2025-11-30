@@ -4,6 +4,8 @@ import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import { orderService } from '../../services/orderService';
 import { feedbackService } from '../../services/feedbackService';
+import { esewaService, submitEsewaPayment } from '../../services/esewaService';
+import { khaltiService } from '../../services/khaltiService';
 import { toast } from 'react-toastify';
 import UserNavbar from '../../components/navbars/UserNavbar';
 import PrintReceipt from '../../components/common/PrintReceipt';
@@ -27,6 +29,9 @@ const UserOrders = () => {
   const [printOrder, setPrintOrder] = useState(null);
   const [editingNotes, setEditingNotes] = useState(null);
   const [orderNotes, setOrderNotes] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedOrderForPayment, setSelectedOrderForPayment] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('card');
 
   const fetchOrders = async () => {
     try {
@@ -56,13 +61,68 @@ const UserOrders = () => {
     }
   };
 
-  const handlePayment = async (orderId) => {
+  const openPaymentModal = (order) => {
+    setSelectedOrderForPayment(order);
+    setPaymentMethod('card');
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    if (!selectedOrderForPayment) return;
+
+    const orderId = selectedOrderForPayment._id;
+
     try {
+      // If payment method is eSewa, initiate eSewa payment
+      if (paymentMethod === 'esewa') {
+        try {
+          const esewaResponse = await esewaService.initiatePayment(orderId);
+          if (esewaResponse.success) {
+            // Submit form to eSewa
+            submitEsewaPayment(esewaResponse.data.paymentUrl, esewaResponse.data.paymentData);
+            setShowPaymentModal(false);
+            setSelectedOrderForPayment(null);
+            return;
+          } else {
+            toast.error('Failed to initiate eSewa payment');
+            return;
+          }
+        } catch (error) {
+          console.error('eSewa payment initiation error:', error);
+          toast.error('Failed to initiate eSewa payment');
+          return;
+        }
+      }
+
+      // If payment method is Khalti, initiate Khalti payment
+      if (paymentMethod === 'khalti') {
+        try {
+          const khaltiResponse = await khaltiService.initiatePayment(orderId);
+          if (khaltiResponse.success) {
+            // Redirect to Khalti payment page
+            window.location.href = khaltiResponse.data.paymentUrl;
+            setShowPaymentModal(false);
+            setSelectedOrderForPayment(null);
+            return;
+          } else {
+            toast.error('Failed to initiate Khalti payment');
+            return;
+          }
+        } catch (error) {
+          console.error('Khalti payment initiation error:', error);
+          toast.error('Failed to initiate Khalti payment');
+          return;
+        }
+      }
+
+      // For other payment methods (cash, card), proceed normally
       await orderService.updatePaymentStatus(orderId, 'paid');
       toast.success('Payment successful!');
+      setShowPaymentModal(false);
+      setSelectedOrderForPayment(null);
       fetchOrders();
     } catch (error) {
-      toast.error('Payment failed');
+      toast.error(error.response?.data?.message || 'Payment failed');
     }
   };
 
@@ -343,6 +403,98 @@ const UserOrders = () => {
         <PrintReceipt order={printOrder} onClose={() => setPrintOrder(null)} />
       )}
 
+      {/* Payment Method Selection Modal */}
+      {showPaymentModal && selectedOrderForPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-3xl p-8 max-w-md w-full shadow-2xl transform transition-all ${
+            theme === 'dark' ? 'bg-gray-800 text-gray-100' : 'bg-white'
+          }`}>
+            <h3 className="text-2xl font-bold mb-4 flex items-center">
+              <span className="text-3xl mr-3">💳</span>
+              <span className="bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent">
+                Select Payment Method
+              </span>
+            </h3>
+            <div className="mb-4">
+              <p className={`text-lg font-semibold ${
+                theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+              }`}>
+                Order #{selectedOrderForPayment._id.slice(-6)}
+              </p>
+              <p className={`text-2xl font-bold mt-2 bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent`}>
+                Rs. {selectedOrderForPayment.totalPrice}
+              </p>
+            </div>
+            <div className="mb-6">
+              <label className={`block text-sm font-semibold mb-3 ${
+                theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+              }`}>
+                Choose Payment Method
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: 'card', label: '💳 Card Payment', description: 'Pay with credit/debit card' },
+                  { value: 'cash', label: '💵 Cash on Delivery', description: 'Pay when you receive your order' },
+                  { value: 'esewa', label: '📱 eSewa', description: 'Pay using eSewa wallet' },
+                  { value: 'khalti', label: '💳 Khalti', description: 'Pay using Khalti wallet' },
+                ].map((method) => (
+                  <button
+                    key={method.value}
+                    onClick={() => setPaymentMethod(method.value)}
+                    className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
+                      paymentMethod === method.value
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/30'
+                        : theme === 'dark'
+                          ? 'border-gray-700 bg-gray-700/50 hover:border-gray-600'
+                          : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className={`font-semibold ${
+                          theme === 'dark' ? 'text-gray-100' : 'text-gray-800'
+                        }`}>
+                          {method.label}
+                        </p>
+                        <p className={`text-xs mt-1 ${
+                          theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        }`}>
+                          {method.description}
+                        </p>
+                      </div>
+                      {paymentMethod === method.value && (
+                        <span className="text-green-500 text-xl">✓</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setSelectedOrderForPayment(null);
+                }}
+                className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-200 hover:bg-gray-600' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePayment}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg"
+              >
+                💳 Proceed to Pay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Notes Modal */}
       {editingNotes && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -576,7 +728,7 @@ const UserOrders = () => {
                           <div className="flex flex-col gap-2">
                             {order.paymentStatus === 'pending' && order.status !== 'cancelled' && (
                               <button
-                                onClick={() => handlePayment(order._id)}
+                                onClick={() => openPaymentModal(order)}
                                 className="w-full lg:w-auto px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg"
                               >
                                 💳 Pay Now

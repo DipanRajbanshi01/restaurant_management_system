@@ -37,8 +37,16 @@ const Login = () => {
     }
   };
 
-  const handleGoogleError = () => {
-    toast.error('Google login failed');
+  const handleGoogleError = (error) => {
+    console.error('Google login error:', error);
+    // More specific error messages
+    if (error?.error === 'popup_closed_by_user') {
+      toast.info('Login cancelled');
+    } else if (error?.error === 'access_denied') {
+      toast.error('Access denied. Please try again.');
+    } else {
+      toast.error('Google login failed. Please check your browser settings or try again.');
+    }
     setLoading(false);
   };
 
@@ -188,7 +196,6 @@ const Login = () => {
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              useOneTap
               theme={theme === 'dark' ? 'filled_black' : 'outline'}
               size="large"
               text="signin_with"
