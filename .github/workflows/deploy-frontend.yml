@@ -36,7 +36,14 @@ jobs:
       - name: Install dependencies
         run: |
           cd client
-          npm ci
+          echo "Checking for package-lock.json..."
+          if [ -f "package-lock.json" ]; then
+            echo "✅ package-lock.json found, using npm ci"
+            npm ci
+          else
+            echo "⚠️ package-lock.json not found, using npm install"
+            npm install
+          fi
         continue-on-error: false
       
       - name: Build application
