@@ -41,15 +41,13 @@ jobs:
         run: |
           cd client
           echo "Building with repository name: $GITHUB_REPO_NAME"
-          echo "API URL: ${VITE_API_URL:-not set}"
-          echo "Google Client ID: ${VITE_GOOGLE_CLIENT_ID:-not set}"
           npm run build
         env:
-          # Repository name for base path
+          # Repository name for base path (required for GitHub Pages)
           GITHUB_REPO_NAME: ${{ github.event.repository.name }}
-          # Backend API URL (set as GitHub Secret: VITE_API_URL)
+          # Optional: Backend API URL (if not set, will use default: http://localhost:5000/api)
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          # Google OAuth Client ID (set as GitHub Secret: VITE_GOOGLE_CLIENT_ID)
+          # Optional: Google OAuth Client ID (if not set, Google login won't work)
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           NODE_ENV: production
         continue-on-error: false
