@@ -9,6 +9,9 @@ yarn.lock
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+client/.env.production
+server/.env
 
 # Logs
 logs

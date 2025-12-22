@@ -114,10 +114,45 @@ NODE_ENV=development
 
 ## Technologies Used
 
-- **Backend**: Node.js, Express.js, MongoDB, Mongoose
-- **Frontend**: React, React Router, Axios
-- **Authentication**: JWT (JSON Web Tokens)
+- **Backend**: Node.js, Express.js, MongoDB, Mongoose, Socket.IO
+- **Frontend**: React, React Router, Axios, Vite, Tailwind CSS
+- **Authentication**: JWT (JSON Web Tokens), Google OAuth
 - **Password Hashing**: bcryptjs
+- **Payment Gateways**: eSewa, Khalti
+- **Real-time**: Socket.IO
+
+## Deployment
+
+This project is configured for deployment to multiple platforms:
+
+### Quick Deploy Options
+
+1. **GitHub Pages (Frontend) + Railway/Render (Backend)**
+   - Frontend automatically deploys via GitHub Actions
+   - See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions
+
+2. **Vercel (Frontend) + Railway (Backend)**
+   - Connect GitHub repository to Vercel
+   - Deploy backend to Railway
+
+3. **Render (Full Stack)**
+   - Deploy both frontend and backend on Render
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+### GitHub Deployment Setup
+
+1. **Set up GitHub Secrets:**
+   - Go to repository → Settings → Secrets and variables → Actions
+   - Add `VITE_API_URL` (your backend URL)
+   - Add `VITE_GOOGLE_CLIENT_ID` (your Google OAuth Client ID)
+
+2. **Enable GitHub Pages:**
+   - Go to repository → Settings → Pages
+   - Source: `GitHub Actions`
+
+3. **Push to main branch:**
+   - GitHub Actions will automatically build and deploy
 
 ## License
 
