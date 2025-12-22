@@ -11,6 +11,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     permissions:
       contents: read
@@ -32,21 +35,36 @@ jobs:
         run: |
           cd client
           npm ci
+        continue-on-error: false
       
       - name: Build application
         run: |
           cd client
+          echo "Building with repository name: $GITHUB_REPO_NAME"
+          echo "API URL: ${VITE_API_URL:-not set}"
+          echo "Google Client ID: ${VITE_GOOGLE_CLIENT_ID:-not set}"
           npm run build
         env:
-          # Set your repository name here (without .github.io)
-          # For example: if your repo is "restaurant-management", set it to "restaurant-management"
+          # Repository name for base path
           GITHUB_REPO_NAME: ${{ github.event.repository.name }}
+          # Backend API URL (set as GitHub Secret: VITE_API_URL)
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          # Google OAuth Client ID (set as GitHub Secret: VITE_GOOGLE_CLIENT_ID)
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           NODE_ENV: production
+        continue-on-error: false
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
+      
+      - name: Verify build output
+        run: |
+          if [ ! -d "client/dist" ]; then
+            echo "❌ Build output directory not found!"
+            exit 1
+          fi
+          echo "✅ Build output found"
+          ls -la client/dist/
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -56,4 +74,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
