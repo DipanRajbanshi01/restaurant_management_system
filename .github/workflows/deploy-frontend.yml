@@ -40,8 +40,16 @@ jobs:
       - name: Build application
         run: |
           cd client
-          echo "Building with repository name: $GITHUB_REPO_NAME"
-          npm run build
+          echo "📦 Building application..."
+          echo "Repository name: $GITHUB_REPO_NAME"
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Current directory: $(pwd)"
+          echo "Files in client directory:"
+          ls -la
+          echo "Starting build..."
+          npm run build 2>&1 | tee build.log || (echo "❌ Build failed!" && cat build.log && exit 1)
+          echo "✅ Build completed successfully"
         env:
           # Repository name for base path (required for GitHub Pages)
           GITHUB_REPO_NAME: ${{ github.event.repository.name }}
@@ -57,12 +65,17 @@ jobs:
       
       - name: Verify build output
         run: |
+          echo "🔍 Verifying build output..."
           if [ ! -d "client/dist" ]; then
             echo "❌ Build output directory not found!"
+            echo "Contents of client directory:"
+            ls -la client/
             exit 1
           fi
           echo "✅ Build output found"
+          echo "Contents of dist directory:"
           ls -la client/dist/
+          echo "Total files: $(find client/dist -type f | wc -l)"
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
