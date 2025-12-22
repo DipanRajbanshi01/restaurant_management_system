@@ -10,7 +10,16 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // Socket.IO needs base URL without /api
+      // If VITE_API_URL is set (e.g., https://backend.railway.app/api), remove /api
+      let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      // Remove /api suffix if present for Socket.IO connection
+      if (apiUrl.endsWith('/api')) {
+        apiUrl = apiUrl.replace('/api', '');
+      } else if (!apiUrl.includes('://')) {
+        // Fallback for localhost without /api
+        apiUrl = 'http://localhost:5000';
+      }
       const newSocket = io(apiUrl, {
         transports: ['websocket', 'polling'], // Allow fallback to polling if websocket fails
         reconnection: true,
