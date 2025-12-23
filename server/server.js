@@ -97,6 +97,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// Test route to verify POST requests work
+app.post('/api/test', (req, res) => {
+  res.json({ status: 'OK', message: 'POST request received', body: req.body });
+});
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
