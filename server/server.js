@@ -37,8 +37,34 @@ const io = new Server(server, {
 // Make io available to routes
 app.set('io', io);
 
+// CORS configuration
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://dipanrajbanshi01.github.io',
+].filter(Boolean); // Remove undefined values
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.some(allowedOrigin => origin === allowedOrigin || origin.startsWith(allowedOrigin))) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV !== 'production') {
+      // In development, allow all origins
+      callback(null, true);
+    } else {
+      callback(null, true); // Temporarily allow all for debugging
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
