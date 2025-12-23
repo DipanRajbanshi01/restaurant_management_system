@@ -8,7 +8,7 @@ This guide explains how to deploy the Restaurant Management System to various pl
 
 #### Frontend Deployment to GitHub Pages
 
-1. **Set up GitHub Secrets:**
+1. **Set up GitHub Secrets:** 
    - Go to your repository → Settings → Secrets and variables → Actions
    - Add the following secrets:
      - `VITE_API_URL`: Your backend API URL (e.g., `https://your-backend.railway.app/api`)
