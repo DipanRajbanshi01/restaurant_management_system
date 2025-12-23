@@ -10,6 +10,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -146,12 +147,11 @@ const Register = () => {
               📧 Phone Number
             </label>
             <input
-              type="phone"
+              type="tel"
               id="phone"
               name="phone"
-              value={formData.number}
+              value={formData.phone}
               onChange={handleChange}
-              required
               className="w-full px-5 py-3 border-2 border-gray-200 rounded-2xl focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition-all duration-300 outline-none text-lg"
               placeholder="+977 9800000000"
             />
